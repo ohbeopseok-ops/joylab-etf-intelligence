@@ -28,6 +28,7 @@ from joylab_etf.assistant.telegram import (
 from joylab_etf.config import Settings
 from joylab_etf.intelligence.decision_engine import load_decision_config
 from joylab_etf.kis.client import KISClient
+from joylab_etf.kis.index import KISIndexAdapter
 from joylab_etf.kis.investor import KISInvestorAdapter
 
 RULES_PATH = ROOT / "config" / "investment_decision_rules.json"
@@ -66,6 +67,7 @@ def build_app() -> TelegramAssistantApp:
         decision_config=load_decision_config(RULES_PATH),
         aliases=load_all_aliases(),
         request_delay_sec=0.35,
+        index_client=KISIndexAdapter(kis_client),
     )
     client = TelegramBotClient(telegram_settings)
     return TelegramAssistantApp(

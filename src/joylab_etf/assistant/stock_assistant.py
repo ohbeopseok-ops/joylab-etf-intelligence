@@ -28,6 +28,10 @@ class InvestorFlowClient(Protocol):
     def get_investor_flow(self, symbol: str) -> list[Any]: ...
 
 
+class IndexClient(Protocol):
+    def get_index_price(self, index_code: str) -> Any: ...
+
+
 class StockAssistantService:
     """Conservative chat facade over verified KIS data and stored rules."""
 
@@ -38,11 +42,13 @@ class StockAssistantService:
         decision_config: InvestmentDecisionConfig,
         aliases: dict[str, str] | None = None,
         request_delay_sec: float = 0.0,
+        index_client: IndexClient | None = None,
     ) -> None:
         self.quote_client = quote_client
         self.investor_client = investor_client
         self.decision_config = decision_config
         self.request_delay_sec = max(0.0, request_delay_sec)
+        self.index_client = index_client
         self.rules = {rule.symbol: rule for rule in decision_config.watch_rules}
         self.aliases = {
             rule.name.strip().casefold(): rule.symbol
@@ -95,17 +101,21 @@ class StockAssistantService:
         if rule is None:
             return self._unruled_report(symbol, quote, flow)
 
+        relative_strength_pass, kospi_change_pct = self._relative_strength(quote)
+
         observation = InstrumentObservation(
             observed_on=date.today(),
             current_price=quote.price,
-            # A current quote and one flow snapshot do not prove confirmation,
-            # trend easing, relative strength, or an intact thesis.
+            # A current quote and one flow snapshot do not prove confirmation
+            # or trend easing -- those stay unknown. Relative strength is
+            # computed live (today's change % vs KOSPI's) when an index
+            # client is configured; otherwise it stays unknown too.
             price_confirmation_pass=None,
             flow_confirmation_pass=None,
             foreign_selling_easing=None,
             institutional_selling_easing=None,
             pension_selling_easing=None,
-            relative_strength_pass=None,
+            relative_strength_pass=relative_strength_pass,
         )
         signals = evaluate_instrument_rule(rule, observation)
         decision = evaluate_investment_decision(
@@ -122,7 +132,22 @@ class StockAssistantService:
                 portfolio_blocking_reasons=["PORTFOLIO_DATA_UNAVAILABLE"],
             )
         )
-        return self._ruled_report(rule, quote, flow, signals, decision)
+        return self._ruled_report(rule, quote, flow, signals, decision, kospi_change_pct)
+
+    def _relative_strength(self, quote: Any) -> tuple[bool | None, float | None]:
+        """(pass, kospi_change_pct). True if today's change % beats KOSPI's.
+
+        This is a same-day excess-return comparison, not a multi-day RS
+        line. Returns (None, None) if no index client is configured or the
+        index fetch fails -- never guessed.
+        """
+        if self.index_client is None or quote.change_pct is None:
+            return None, None
+        try:
+            kospi = self.index_client.get_index_price("0001")
+        except Exception:
+            return None, None
+        return quote.change_pct > kospi.change_pct, kospi.change_pct
 
     @staticmethod
     def help_text() -> str:
@@ -154,9 +179,13 @@ class StockAssistantService:
         flow: list[Any],
         signals: Any,
         decision: Any,
+        kospi_change_pct: float | None,
     ) -> str:
         notes = "; ".join(rule.notes) if rule.notes else "등록된 추가 조건 없음"
         blockers = ", ".join(decision.blocking_reasons[:8])
+        unconfirmed = ["다일 수급 추세", "연기금", "기업가치·EPS", "지배구조", "투자논지", "실계좌 포트폴리오"]
+        if kospi_change_pct is None:
+            unconfirmed.insert(0, "상대강도")
         return "\n".join(
             [
                 f"{rule.name} ({rule.symbol})",
@@ -166,15 +195,13 @@ class StockAssistantService:
                 (
                     "Gate: "
                     f"Price={signals.price_gate.value}, Flow={signals.flow_gate.value}, "
-                    f"상대강도={signals.relative_strength_gate.value}, "
-                    f"데이터={signals.data_confidence_gate.value}"
+                    f"상대강도={signals.relative_strength_gate.value}"
+                    + (f" (KOSPI {kospi_change_pct:+.2f}%)" if kospi_change_pct is not None else "")
+                    + f", 데이터={signals.data_confidence_gate.value}"
                 ),
                 f"차단 근거: {blockers}",
                 f"변경 조건/규칙: {notes}",
-                (
-                    "미확인: 다일 수급 추세, 연기금, 상대강도, 기업가치·EPS, "
-                    "지배구조, 투자논지, 실계좌 포트폴리오"
-                ),
+                f"미확인: {', '.join(unconfirmed)}",
                 f"규칙 유효기간: {rule.as_of_date}~{rule.valid_through}",
             ]
         )

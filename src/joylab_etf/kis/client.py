@@ -6,6 +6,7 @@ import requests
 
 from joylab_etf.config import Settings
 from joylab_etf.kis.models import MarketQuote
+from joylab_etf.kis.token_store import load_token, save_token
 
 KST = timezone(timedelta(hours=9))
 
@@ -15,6 +16,11 @@ class KISClient:
         self._access_token: str | None = None
 
     def authenticate(self) -> None:
+        cached = load_token()
+        if cached:
+            self._access_token = cached.access_token
+            return
+
         url = f"{self.settings.base_url}/oauth2/tokenP"
         payload = {
             "grant_type": "client_credentials",
@@ -36,6 +42,12 @@ class KISClient:
                 f"KIS token 발급 실패: msg_cd={data.get('msg_cd')} "
                 f"msg1={data.get('msg1')}"
             )
+
+        expires_in = int(data.get("expires_in", 86400))
+        expires_at = datetime.now(timezone.utc) + timedelta(
+            seconds=max(60, expires_in - 120)
+        )
+        save_token(token, expires_at)
         self._access_token = token
 
     def _auth_headers(self, tr_id: str) -> dict[str, str]:
