@@ -94,6 +94,11 @@ class InstrumentWatchRule(BaseModel):
     # evaluate_ai_power_gate(ai_power_watch, ai_power_policy) instead --
     # this is the actual Gate 10 formula, not a hand-set label.
     ai_power_watch: "AIPowerWatchInput | None" = None
+    # Same pattern as governance_esr_gate: no live source, human/LLM-set,
+    # rides as_of_date/valid_through staleness. Default UNKNOWN matches the
+    # prior hardcoded behavior in StockAssistantService.analyze() before
+    # this field existed -- INTACT is never assumed by default.
+    thesis_state: ThesisState = ThesisState.UNKNOWN
 
     @model_validator(mode="after")
     def validate_dates(self) -> "InstrumentWatchRule":
