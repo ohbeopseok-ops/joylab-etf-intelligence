@@ -1,0 +1,45 @@
+{
+  "000660": {
+    "DATA_CONFIDENCE": "PASS",
+    "FLOW": "UNKNOWN",
+    "PRICE": "FAIL",
+    "RELATIVE_STRENGTH": "FAIL"
+  },
+  "005380": {
+    "DATA_CONFIDENCE": "PASS",
+    "FLOW": "UNKNOWN",
+    "PRICE": "FAIL",
+    "RELATIVE_STRENGTH": "PASS"
+  },
+  "005930": {
+    "DATA_CONFIDENCE": "PASS",
+    "FLOW": "UNKNOWN",
+    "PRICE": "FAIL",
+    "RELATIVE_STRENGTH": "FAIL"
+  },
+  "035420": {
+    "DATA_CONFIDENCE": "PASS",
+    "FLOW": "UNKNOWN",
+    "PRICE": "UNKNOWN",
+    "RELATIVE_STRENGTH": "FAIL"
+  },
+  "066570": {
+    "DATA_CONFIDENCE": "PASS",
+    "FLOW": "UNKNOWN",
+    "PRICE": "UNKNOWN",
+    "RELATIVE_STRENGTH": "FAIL"
+  },
+  "069500": {
+    "DATA_CONFIDENCE": "PASS",
+    "FLOW": "UNKNOWN",
+    "PRICE": "UNKNOWN",
+    "RELATIVE_STRENGTH": "PASS"
+  },
+  "487240": {
+    "AI_POWER": "UNKNOWN",
+    "DATA_CONFIDENCE": "PASS",
+    "FLOW": "UNKNOWN",
+    "PRICE": "UNKNOWN",
+    "RELATIVE_STRENGTH": "PASS"
+  }
+}
