@@ -1,0 +1,93 @@
+{
+  "snapshot_name": "JoyLab 투자 사고체계 2026-08-25",
+  "ai_power_policy": {
+    "min_rotation_checks": 3,
+    "require_etf_outperformance": true,
+    "require_revenue_translation": true
+  },
+  "ai_power_score_policy": {
+    "order_backlog_missing_cap": 79,
+    "margin_missing_cap": 84
+  },
+  "opportunity_policy": {
+    "candidate_threshold": 80,
+    "pension_adjustment_max_abs": 5
+  },
+  "watch_rules": [
+    {
+      "symbol": "005930",
+      "name": "삼성전자",
+      "as_of_date": "2026-08-25",
+      "valid_through": "2026-08-26",
+      "ticker_source_url": "https://www.samsungfund.com/etf/product/view.do?id=2ETF01",
+      "price": {"recovery_min": 260000},
+      "flow": {
+        "require_foreign_selling_easing": true,
+        "require_institutional_selling_easing": true,
+        "require_pension_selling_easing": true
+      },
+      "notes": ["Falling Price is not a buy signal", "260K recovery required"]
+    },
+    {
+      "symbol": "000660",
+      "name": "SK하이닉스",
+      "as_of_date": "2026-08-25",
+      "valid_through": "2026-08-26",
+      "ticker_source_url": "https://www.samsungfund.com/etf/product/view.do?id=2ETF01",
+      "price": {"recovery_min": 1700000},
+      "flow": {"require_foreign_selling_easing": true},
+      "notes": ["Semiconductor priority over Samsung only after confirmation"]
+    },
+    {
+      "symbol": "069500",
+      "name": "KODEX 200",
+      "as_of_date": "2026-08-25",
+      "valid_through": "2026-08-26",
+      "ticker_source_url": "https://www.samsungfund.com/etf/product/view.do?id=2ETF01",
+      "notes": ["Large-cap flow recovery required before adding"]
+    },
+    {
+      "symbol": "005380",
+      "name": "현대차",
+      "as_of_date": "2026-08-25",
+      "valid_through": "2026-08-26",
+      "ticker_source_url": "https://www.samsungfund.com/etf/product/view.do?id=2ETFC5",
+      "price": {
+        "buy_zone_min": 405000,
+        "buy_zone_max": 415000,
+        "no_chase_above": 420000
+      },
+      "notes": ["Do not chase strength above 420K"]
+    },
+    {
+      "symbol": "066570",
+      "name": "LG전자",
+      "as_of_date": "2026-08-25",
+      "valid_through": "2026-08-26",
+      "ticker_source_url": "https://www.samsungfund.com/etf/product/view.do?id=2ETFC5",
+      "price": {"recovery_min": 199000},
+      "notes": ["Market-relative strength must return after 199-200K recovery"]
+    },
+    {
+      "symbol": "035420",
+      "name": "NAVER",
+      "as_of_date": "2026-08-25",
+      "valid_through": "2026-08-26",
+      "ticker_source_url": "https://www.samsungfund.com/etf/product/view.do?id=2ETFC5",
+      "flow": {"min_pension_net_buy_streak_days": 3},
+      "notes": ["Pension rotation requires at least three consecutive buy days"]
+    },
+    {
+      "symbol": "487240",
+      "name": "KODEX AI전력핵심설비",
+      "as_of_date": "2026-08-25",
+      "valid_through": "2026-08-26",
+      "ticker_source_url": "https://www.samsungfund.com/etf/product/view.do?id=2ETFN7",
+      "price": {"recovery_min": 32500},
+      "notes": [
+        "AI Power watchlist priority does not imply BUY",
+        "ETF relative strength and Revenue Translation must also pass"
+      ]
+    }
+  ]
+}
