@@ -26,7 +26,12 @@
         "require_institutional_selling_easing": true,
         "require_pension_selling_easing": true
       },
-      "notes": ["Falling Price is not a buy signal", "260K recovery required"]
+      "governance_esr_gate": "FAIL",
+      "notes": [
+        "Falling Price is not a buy signal",
+        "260K recovery required",
+        "Governance: 금산법 10% rule limits aggressive buyback cancellation (Samsung Life/Fire combined stake near 10%), buyback quality doubtful -- see docs/JOYLAB_INVESTMENT_ENGINE.md section 3"
+      ]
     },
     {
       "symbol": "000660",

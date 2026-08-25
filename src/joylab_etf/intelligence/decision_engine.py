@@ -84,6 +84,12 @@ class InstrumentWatchRule(BaseModel):
     flow: FlowRule = Field(default_factory=FlowRule)
     require_relative_strength: bool = True
     notes: list[str] = Field(default_factory=list)
+    # Qualitative gates: KIS has no live source for these, so a human/LLM
+    # sets them explicitly during conversation and they ride the same
+    # as_of_date/valid_through staleness check as price/flow. Default
+    # NOT_APPLICABLE means "not yet assessed", not "passes".
+    governance_esr_gate: SignalState = SignalState.NOT_APPLICABLE
+    ai_power_gate: SignalState = SignalState.NOT_APPLICABLE
 
     @model_validator(mode="after")
     def validate_dates(self) -> "InstrumentWatchRule":
