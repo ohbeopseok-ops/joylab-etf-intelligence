@@ -9,7 +9,7 @@
     "DATA_CONFIDENCE": "PASS",
     "FLOW": "UNKNOWN",
     "PRICE": "FAIL",
-    "RELATIVE_STRENGTH": "FAIL"
+    "RELATIVE_STRENGTH": "PASS"
   },
   "005930": {
     "DATA_CONFIDENCE": "PASS",
