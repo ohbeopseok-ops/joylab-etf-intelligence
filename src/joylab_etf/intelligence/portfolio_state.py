@@ -106,6 +106,15 @@ class PortfolioStateProvider:
         )
         return report, positions, summary
 
+    def get_buying_power(self, symbol: str, reference_price: float) -> Any:
+        """KIS no-credit buyable amount/qty for `symbol` at `reference_price`.
+        Symbol/price-dependent -- there is no single account-wide "orderable
+        amount" per CLAUDE.md (dnca_tot_amt is explicitly not authoritative)."""
+        self._ensure()
+        assert self._client is not None and self._settings is not None
+        buying_power = KISBuyingPowerAdapter(self._client, self._settings)
+        return buying_power.inquire(symbol=symbol, reference_price=reference_price)
+
     def get_gate_result(self, symbol: str, name: str, current_price: float) -> GateResult | None:
         """Real Portfolio Gate for `symbol`. None if its cluster has no
         configured cap (e.g. power_equipment) -- never invents one."""
