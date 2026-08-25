@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from joylab_etf.intelligence.decision_engine import (
+    DecisionAction,
     DecisionInput,
     InstrumentObservation,
     InstrumentWatchRule,
@@ -16,8 +17,15 @@ from joylab_etf.intelligence.decision_engine import (
     evaluate_instrument_rule,
     evaluate_investment_decision,
 )
+from joylab_etf.intelligence.portfolio_state import PortfolioDataUnavailable, PortfolioStateProvider
 
 SYMBOL_PATTERN = re.compile(r"^[0-9A-Z]{6}$")
+
+ACTION_EMOJI = {
+    DecisionAction.BUY: "🟢",
+    DecisionAction.HOLD: "🟡",
+    DecisionAction.SELL: "🔴",
+}
 
 
 class QuoteClient(Protocol):
@@ -43,12 +51,14 @@ class StockAssistantService:
         aliases: dict[str, str] | None = None,
         request_delay_sec: float = 0.0,
         index_client: IndexClient | None = None,
+        portfolio_provider: PortfolioStateProvider | None = None,
     ) -> None:
         self.quote_client = quote_client
         self.investor_client = investor_client
         self.decision_config = decision_config
         self.request_delay_sec = max(0.0, request_delay_sec)
         self.index_client = index_client
+        self.portfolio_provider = portfolio_provider
         self.rules = {rule.symbol: rule for rule in decision_config.watch_rules}
         self.aliases = {
             rule.name.strip().casefold(): rule.symbol
@@ -61,6 +71,9 @@ class StockAssistantService:
         raw = text.strip()
         if not raw or raw in {"/start", "/help"}:
             return self.help_text()
+
+        if raw in {"/portfolio", "/계좌", "/포트폴리오", "내 계좌", "내 계좌 보여줘", "포트폴리오"}:
+            return self.portfolio_summary()
 
         parts = raw.split(maxsplit=1)
         command = parts[0].split("@", 1)[0].lower()
@@ -118,6 +131,11 @@ class StockAssistantService:
             relative_strength_pass=relative_strength_pass,
         )
         signals = evaluate_instrument_rule(rule, observation)
+        gate_result, portfolio_fallback_reason = self._portfolio_gate(symbol, rule.name, quote.price)
+        portfolio_allowed_qty = gate_result.final_allowed_qty if gate_result else 0
+        portfolio_blocking_reasons = (
+            gate_result.blocking_reasons if gate_result else [portfolio_fallback_reason]
+        )
         decision = evaluate_investment_decision(
             DecisionInput(
                 symbol=symbol,
@@ -130,11 +148,66 @@ class StockAssistantService:
                 governance_esr_gate=rule.governance_esr_gate,
                 ai_power_gate=rule.ai_power_gate,
                 thesis_state=ThesisState.UNKNOWN,
-                portfolio_allowed_qty=0,
-                portfolio_blocking_reasons=["PORTFOLIO_DATA_UNAVAILABLE"],
+                portfolio_allowed_qty=portfolio_allowed_qty,
+                portfolio_blocking_reasons=portfolio_blocking_reasons,
             )
         )
-        return self._ruled_report(rule, quote, flow, signals, decision, kospi_change_pct)
+        return self._ruled_report(rule, quote, flow, signals, decision, kospi_change_pct, gate_result)
+
+    def portfolio_summary(self) -> str:
+        if self.portfolio_provider is None:
+            return "실계좌 연동이 설정되지 않았습니다 (KIS_ACCOUNT_NO/PRODUCT_CODE 미설정)."
+        try:
+            report, _positions, summary = self.portfolio_provider.get_exposure_report()
+        except PortfolioDataUnavailable as exc:
+            return f"실계좌 연동이 설정되지 않았습니다: {exc}"
+        except Exception as exc:
+            return f"계좌 조회 중 오류가 발생했습니다: {type(exc).__name__}"
+
+        if summary.total_evaluation is None:
+            return "계좌 총평가금액을 KIS에서 받지 못했습니다 (UNKNOWN)."
+
+        lines = [
+            "내 계좌",
+            f"총평가금액: {summary.total_evaluation:,.0f}원",
+            (
+                f"현금: {summary.cash:,.0f}원"
+                if summary.cash is not None
+                else "현금: UNKNOWN"
+            ),
+        ]
+        top_rows = sorted(report.rows, key=lambda row: row.total_value, reverse=True)[:10]
+        if not top_rows:
+            lines.append("보유/노출 종목 없음")
+        else:
+            lines.append("보유/노출 상위 종목 (직접 + ETF 간접 합산):")
+            for row in top_rows:
+                lines.append(
+                    f"  {row.name} ({row.symbol}): {row.total_value:,.0f}원 "
+                    f"({row.portfolio_weight_pct}%, 직접 {row.direct_value:,.0f} + "
+                    f"간접 {row.indirect_value:,.0f})"
+                )
+        lines.append(
+            f"반도체 클러스터 노출: {report.semiconductor_value:,.0f}원 "
+            f"({report.semiconductor_weight_pct_of_securities}% of 보유증권가치)"
+        )
+        return "\n".join(lines)
+
+    def _portfolio_gate(self, symbol: str, name: str, current_price: float) -> tuple[Any, str]:
+        """(GateResult|None, fallback_reason). fallback_reason is only
+        meaningful when the result is None -- never a guessed qty dressed
+        up as a real gate."""
+        if self.portfolio_provider is None:
+            return None, "PORTFOLIO_DATA_UNAVAILABLE"
+        try:
+            gate_result = self.portfolio_provider.get_gate_result(symbol, name, current_price)
+        except PortfolioDataUnavailable:
+            return None, "PORTFOLIO_DATA_UNAVAILABLE"
+        except Exception:
+            return None, "PORTFOLIO_GATE_ERROR"
+        if gate_result is None:
+            return None, "PORTFOLIO_CLUSTER_POLICY_UNDEFINED"
+        return gate_result, ""
 
     def _relative_strength(self, quote: Any) -> tuple[bool | None, float | None]:
         """(pass, kospi_change_pct). True if today's change % beats KOSPI's.
@@ -182,14 +255,17 @@ class StockAssistantService:
         signals: Any,
         decision: Any,
         kospi_change_pct: float | None,
+        gate_result: Any = None,
     ) -> str:
         notes = "; ".join(rule.notes) if rule.notes else "등록된 추가 조건 없음"
-        blockers = ", ".join(decision.blocking_reasons[:8])
-        unconfirmed = ["다일 수급 추세", "연기금", "기업가치·EPS", "투자논지", "실계좌 포트폴리오"]
+        blockers = ", ".join(decision.blocking_reasons)
+        unconfirmed = ["다일 수급 추세", "연기금", "기업가치·EPS", "투자논지"]
         if kospi_change_pct is None:
             unconfirmed.insert(0, "상대강도")
         if rule.governance_esr_gate == SignalState.NOT_APPLICABLE:
             unconfirmed.append("지배구조/ESR")
+        if self.portfolio_provider is None:
+            unconfirmed.append("실계좌 포트폴리오")
 
         gate_line = (
             "Gate: "
@@ -203,19 +279,28 @@ class StockAssistantService:
         if rule.ai_power_gate != SignalState.NOT_APPLICABLE:
             gate_line += f", AIPower={rule.ai_power_gate.value}"
 
-        return "\n".join(
+        lines = [
+            f"{rule.name} ({rule.symbol})",
+            self._quote_line(quote),
+            self._flow_line(flow),
+            f"판단: {ACTION_EMOJI[decision.action]} {decision.action.value} / 추천수량 {decision.recommended_qty}주",
+            gate_line,
+        ]
+        if gate_result is not None:
+            lines.append(
+                f"실계좌 노출도: {gate_result.true_exposure_before:,.0f}원 "
+                f"({gate_result.true_weight_before_pct}% of account), "
+                f"클러스터 {gate_result.cluster_weight_before_pct}%"
+            )
+        lines.extend(
             [
-                f"{rule.name} ({rule.symbol})",
-                self._quote_line(quote),
-                self._flow_line(flow),
-                f"판단: 🟡 {decision.action.value} / 추천수량 {decision.recommended_qty}주",
-                gate_line,
                 f"차단 근거: {blockers}",
                 f"변경 조건/규칙: {notes}",
                 f"미확인: {', '.join(unconfirmed)}",
                 f"규칙 유효기간: {rule.as_of_date}~{rule.valid_through}",
             ]
         )
+        return "\n".join(lines)
 
     @staticmethod
     def _quote_line(quote: Any) -> str:

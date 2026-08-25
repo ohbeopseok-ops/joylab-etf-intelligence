@@ -39,6 +39,7 @@ from joylab_etf.assistant.stock_assistant import StockAssistantService
 from joylab_etf.assistant.telegram import TelegramBotClient, TelegramSettings
 from joylab_etf.config import Settings
 from joylab_etf.intelligence.decision_engine import load_decision_config
+from joylab_etf.intelligence.portfolio_state import PortfolioStateProvider
 from joylab_etf.kis.client import KISClient
 from joylab_etf.kis.index import KISIndexAdapter
 from joylab_etf.kis.investor import KISInvestorAdapter
@@ -46,6 +47,7 @@ from joylab_etf.kis.investor import KISInvestorAdapter
 RULES_PATH = ROOT / "config" / "investment_decision_rules.json"
 AI_POWER_PATH = ROOT / "config" / "ai_power_universe.json"
 TICKER_UNIVERSE_PATH = ROOT / "config" / "ticker_universe.json"
+CONFIG_DIR = ROOT / "config"
 
 
 def load_verified_etf_aliases(path: Path = AI_POWER_PATH) -> dict[str, str]:
@@ -80,6 +82,7 @@ def build_service_and_client() -> tuple[StockAssistantService, TelegramBotClient
         aliases=load_all_aliases(),
         request_delay_sec=0.35,
         index_client=KISIndexAdapter(kis_client),
+        portfolio_provider=PortfolioStateProvider(CONFIG_DIR),
     )
     client = TelegramBotClient(telegram_settings)
     return service, client, telegram_settings
