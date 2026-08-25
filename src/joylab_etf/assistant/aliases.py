@@ -19,6 +19,9 @@ def load_ticker_universe_aliases(path: str | Path) -> dict[str, str]:
         name = item.get("name")
         if isinstance(symbol, str) and isinstance(name, str):
             aliases[name] = symbol
+            for extra_name in item.get("aliases", []):
+                if isinstance(extra_name, str):
+                    aliases[extra_name] = symbol
     return aliases
 
 
