@@ -4,9 +4,18 @@ from datetime import datetime, timedelta, timezone
 import time
 import requests
 
+from joylab_etf.kis import kv_store
 from joylab_etf.kis.token_store_v0142 import load_token, save_token, delete_token
 
 KST = timezone(timedelta(hours=9))
+
+# See kis/client.py's KIS_THROTTLE_KEY comment: the in-process
+# _last_request_at below only helps within one invocation (multiple
+# account calls handling a single request); the KV throttle is what
+# actually spaces out calls across separate Vercel invocations. Uses a
+# different key from the quote-side client so account and market-data
+# calls don't unnecessarily wait on each other.
+KIS_THROTTLE_KEY_ACCOUNT = "kis:last_call_ts:account"
 
 
 class KISClient:
@@ -21,6 +30,7 @@ class KISClient:
         if elapsed < self.min_interval_sec:
             time.sleep(self.min_interval_sec - elapsed)
         self._last_request_at = time.monotonic()
+        kv_store.throttle(KIS_THROTTLE_KEY_ACCOUNT, self.min_interval_sec)
 
     def authenticate(self, force_refresh: bool = False) -> str:
         if force_refresh:
