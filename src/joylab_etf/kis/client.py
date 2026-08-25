@@ -5,10 +5,22 @@ from typing import Any
 import requests
 
 from joylab_etf.config import Settings
+from joylab_etf.kis import kv_store
 from joylab_etf.kis.models import MarketQuote
 from joylab_etf.kis.token_store import load_token, save_token
 
 KST = timezone(timedelta(hours=9))
+
+# Cross-invocation throttle: each Vercel webhook call is a fresh process,
+# so an in-process "last request time" resets every time and never
+# prevents two Telegram messages seconds apart from both racing past
+# KIS's per-second limit (EGW00201). Routing every quote/index/investor
+# call through _auth_headers (their one shared chokepoint) and throttling
+# there via KV closes that gap when KV is configured; when it isn't
+# (local dev, GitHub Actions), kv_store.throttle() is a silent no-op and
+# behavior is unchanged from before.
+KIS_THROTTLE_KEY = "kis:last_call_ts"
+KIS_MIN_INTERVAL_SEC = 0.35
 
 class KISClient:
     def __init__(self, settings: Settings):
@@ -53,6 +65,8 @@ class KISClient:
     def _auth_headers(self, tr_id: str) -> dict[str, str]:
         if not self._access_token:
             self.authenticate()
+
+        kv_store.throttle(KIS_THROTTLE_KEY, KIS_MIN_INTERVAL_SEC)
 
         return {
             "Content-Type": "application/json; charset=utf-8",
