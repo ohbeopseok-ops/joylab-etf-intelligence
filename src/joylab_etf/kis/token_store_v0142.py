@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
-TOKEN_DIR = Path("tokens")
+# See kis/token_store.py for why this must not be a relative path on Vercel
+# (deployed code directory is read-only at runtime; only /tmp is writable).
+TOKEN_DIR = Path("/tmp/joylab_tokens") if os.getenv("VERCEL") else Path("tokens")
 
 
 @dataclass
