@@ -127,6 +127,8 @@ class StockAssistantService:
                 relative_strength_gate=signals.relative_strength_gate,
                 strategy_gate=SignalState.UNKNOWN,
                 data_confidence_gate=signals.data_confidence_gate,
+                governance_esr_gate=rule.governance_esr_gate,
+                ai_power_gate=rule.ai_power_gate,
                 thesis_state=ThesisState.UNKNOWN,
                 portfolio_allowed_qty=0,
                 portfolio_blocking_reasons=["PORTFOLIO_DATA_UNAVAILABLE"],
@@ -183,22 +185,31 @@ class StockAssistantService:
     ) -> str:
         notes = "; ".join(rule.notes) if rule.notes else "등록된 추가 조건 없음"
         blockers = ", ".join(decision.blocking_reasons[:8])
-        unconfirmed = ["다일 수급 추세", "연기금", "기업가치·EPS", "지배구조", "투자논지", "실계좌 포트폴리오"]
+        unconfirmed = ["다일 수급 추세", "연기금", "기업가치·EPS", "투자논지", "실계좌 포트폴리오"]
         if kospi_change_pct is None:
             unconfirmed.insert(0, "상대강도")
+        if rule.governance_esr_gate == SignalState.NOT_APPLICABLE:
+            unconfirmed.append("지배구조/ESR")
+
+        gate_line = (
+            "Gate: "
+            f"Price={signals.price_gate.value}, Flow={signals.flow_gate.value}, "
+            f"상대강도={signals.relative_strength_gate.value}"
+            + (f" (KOSPI {kospi_change_pct:+.2f}%)" if kospi_change_pct is not None else "")
+            + f", 데이터={signals.data_confidence_gate.value}"
+        )
+        if rule.governance_esr_gate != SignalState.NOT_APPLICABLE:
+            gate_line += f", Governance/ESR={rule.governance_esr_gate.value}"
+        if rule.ai_power_gate != SignalState.NOT_APPLICABLE:
+            gate_line += f", AIPower={rule.ai_power_gate.value}"
+
         return "\n".join(
             [
                 f"{rule.name} ({rule.symbol})",
                 self._quote_line(quote),
                 self._flow_line(flow),
                 f"판단: 🟡 {decision.action.value} / 추천수량 {decision.recommended_qty}주",
-                (
-                    "Gate: "
-                    f"Price={signals.price_gate.value}, Flow={signals.flow_gate.value}, "
-                    f"상대강도={signals.relative_strength_gate.value}"
-                    + (f" (KOSPI {kospi_change_pct:+.2f}%)" if kospi_change_pct is not None else "")
-                    + f", 데이터={signals.data_confidence_gate.value}"
-                ),
+                gate_line,
                 f"차단 근거: {blockers}",
                 f"변경 조건/규칙: {notes}",
                 f"미확인: {', '.join(unconfirmed)}",
