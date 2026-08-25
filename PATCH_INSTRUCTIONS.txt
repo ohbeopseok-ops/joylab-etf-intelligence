@@ -1,0 +1,32 @@
+
+V0.1.6 Portfolio Gate
+
+1. 기존 V0.1.5 프로젝트에 압축 내용 복사
+
+2. 정책 파일 생성
+copy config\portfolio_policy.example.json config\portfolio_policy.json
+
+3. 실행
+python scripts/portfolio_gate_v016.py
+
+4. Gold tests
+pytest tests/gold_cases -q
+
+PASS 목표:
+[PASS] GATE-01 Single Stock Max
+[PASS] GATE-02 Cluster Max
+[PASS] GATE-03 KIS Buying Power
+[PASS] GATE-04 Split Buy
+[PASS] GATE-05 Post-buy Weight
+[PASS] V0.1.6 Portfolio Gate
+
+정책 기본값:
+Single Stock Max = 30% of total account
+Semiconductor Cluster Max = 50% of total account
+Split = 30 / 30 / 40
+
+중요:
+Cluster 50%는 하드코딩하지 않고 config policy로 분리.
+V0.2에서 백테스트 후 조정 가능.
+
+주문 실행 API 없음.

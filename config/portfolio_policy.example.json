@@ -1,0 +1,14 @@
+{
+  "single_stock_max_pct_of_total_account": 30.0,
+  "cluster_max_pct_of_total_account": {
+    "semiconductor": 50.0
+  },
+  "split_buy": [
+    0.3,
+    0.3,
+    0.4
+  ],
+  "default_split_stage": 1,
+  "use_no_credit_buying_power": true,
+  "minimum_order_qty": 1
+}

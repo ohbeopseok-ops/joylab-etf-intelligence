@@ -1,0 +1,28 @@
+{
+  "positions": [
+    {
+      "symbol": "005930",
+      "name": "삼성전자",
+      "quantity": 3,
+      "type": "stock"
+    },
+    {
+      "symbol": "000660",
+      "name": "SK하이닉스",
+      "quantity": 0,
+      "type": "stock"
+    },
+    {
+      "symbol": "069500",
+      "name": "KODEX200",
+      "quantity": 2,
+      "type": "etf"
+    }
+  ],
+  "clusters": {
+    "semiconductor": [
+      "005930",
+      "000660"
+    ]
+  }
+}
