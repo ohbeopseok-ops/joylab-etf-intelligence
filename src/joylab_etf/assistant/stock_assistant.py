@@ -10,6 +10,7 @@ from joylab_etf.intelligence.decision_engine import (
     AIPowerGateResult,
     DecisionAction,
     DecisionInput,
+    ExitTrigger,
     InstrumentObservation,
     InstrumentWatchRule,
     InvestmentDecisionConfig,
@@ -34,6 +35,66 @@ ACTION_EMOJI = {
     DecisionAction.BUY: "🟢",
     DecisionAction.HOLD: "🟡",
     DecisionAction.SELL: "🔴",
+}
+
+# Gates this codebase never actually computes for any ticker (always
+# UNKNOWN, regardless of live data or config) -- listing them as
+# "reasons" in a report is noise, not information. Kept in one place so
+# the day one of them becomes real (a rule starts setting it), removing
+# it here is a one-line change.
+STRUCTURALLY_UNIMPLEMENTED_GATES = {
+    "VALUATION",
+    "FUNDAMENTAL_EPS",
+    "STRATEGY",
+    "SEMICONDUCTOR",
+    "KOREA_TRANSLATION",
+    "PENSION_ROTATION",
+}
+
+REASON_LABELS: list[tuple[str, str]] = [
+    ("PRICE_GATE", "가격"),
+    ("FLOW_GATE", "수급"),
+    ("RELATIVE_STRENGTH_GATE", "상대강도"),
+    ("DATA_CONFIDENCE_GATE", "데이터 최신성"),
+    ("STALE_STRATEGY_RULE", "데이터 최신성"),
+    ("GOVERNANCE_ESR_GATE", "지배구조/주주환원"),
+    ("AI_POWER_GATE", "AI Power 로테이션"),
+    ("THESIS_", "투자논지"),
+    ("PORTFOLIO_", "계좌 한도"),
+]
+
+
+def _short_reason_labels(blocking_reasons: list[str]) -> list[str]:
+    labels: list[str] = []
+    for reason in blocking_reasons:
+        if any(reason.startswith(f"{gate}_GATE") for gate in STRUCTURALLY_UNIMPLEMENTED_GATES):
+            continue
+        for prefix, label in REASON_LABELS:
+            if reason.startswith(prefix):
+                if label not in labels:
+                    labels.append(label)
+                break
+    return labels
+
+
+GATE_EMOJI = {
+    SignalState.PASS: "✅",
+    SignalState.FAIL: "❌",
+    SignalState.UNKNOWN: "❔",
+    SignalState.NOT_APPLICABLE: "➖",
+}
+
+THESIS_EMOJI = {
+    ThesisState.INTACT: "✅",
+    ThesisState.WEAKENING: "⚠️",
+    ThesisState.BROKEN: "❌",
+    ThesisState.UNKNOWN: "➖",
+}
+
+EXIT_TRIGGER_LABELS = {
+    ExitTrigger.THESIS_BROKEN: "투자논지 훼손",
+    ExitTrigger.LEVERAGE_RISK: "레버리지 리스크",
+    ExitTrigger.DAMAGE_EXPANDING: "손실 확대",
 }
 
 
@@ -435,43 +496,13 @@ class StockAssistantService:
         gate_result: Any = None,
         ai_power_result: AIPowerGateResult | None = None,
     ) -> str:
-        notes = "; ".join(rule.notes) if rule.notes else "등록된 추가 조건 없음"
-        blockers = ", ".join(decision.blocking_reasons)
-        unconfirmed = ["다일 수급 추세", "연기금", "기업가치·EPS"]
-        if kospi_change_pct is None:
-            unconfirmed.insert(0, "상대강도")
-        if rule.governance_esr_gate == SignalState.NOT_APPLICABLE:
-            unconfirmed.append("지배구조/ESR")
-        if rule.thesis_state == ThesisState.UNKNOWN:
-            unconfirmed.append("투자논지")
-        if self.portfolio_provider is None:
-            unconfirmed.append("실계좌 포트폴리오")
-
-        gate_line = (
-            "Gate: "
-            f"Price={signals.price_gate.value}, Flow={signals.flow_gate.value}, "
-            f"상대강도={signals.relative_strength_gate.value}"
-            + (f" (KOSPI {kospi_change_pct:+.2f}%)" if kospi_change_pct is not None else "")
-            + f", 데이터={signals.data_confidence_gate.value}"
-            + f", Thesis={rule.thesis_state.value}"
-        )
-        if rule.governance_esr_gate != SignalState.NOT_APPLICABLE:
-            gate_line += f", Governance/ESR={rule.governance_esr_gate.value}"
-        if ai_power_result is not None:
-            gate_line += (
-                f", AIPower={ai_power_result.state.value} "
-                f"(rotation {ai_power_result.rotation_score}/5 {ai_power_result.rotation_level.value}, "
-                f"revenue={ai_power_result.revenue_translation_state.value})"
-            )
-        elif rule.ai_power_gate != SignalState.NOT_APPLICABLE:
-            gate_line += f", AIPower={rule.ai_power_gate.value}"
-
         lines = [
             f"{rule.name} ({rule.symbol})",
             self._quote_line(quote),
             self._flow_line(flow),
-            f"판단: {ACTION_EMOJI[decision.action]} {decision.action.value} / 추천수량 {decision.recommended_qty}주",
-            gate_line,
+            f"{ACTION_EMOJI[decision.action]} {decision.action.value} / {decision.recommended_qty}주",
+            self._reason_line(decision),
+            self._checklist_line(rule, quote, signals, kospi_change_pct, gate_result, ai_power_result),
         ]
         if ai_power_result is not None and ai_power_result.unknown_rotation_checks:
             lines.append(
@@ -479,19 +510,64 @@ class StockAssistantService:
             )
         if gate_result is not None:
             lines.append(
-                f"실계좌 노출도: {gate_result.true_exposure_before:,.0f}원 "
-                f"({gate_result.true_weight_before_pct}% of account), "
-                f"클러스터 {gate_result.cluster_weight_before_pct}%"
+                f"실계좌 노출: {gate_result.true_weight_before_pct}% "
+                f"(클러스터 {gate_result.cluster_weight_before_pct}%)"
             )
-        lines.extend(
-            [
-                f"차단 근거: {blockers}",
-                f"변경 조건/규칙: {notes}",
-                f"미확인: {', '.join(unconfirmed)}",
-                f"규칙 유효기간: {rule.as_of_date}~{rule.valid_through}",
-            ]
-        )
         return "\n".join(lines)
+
+    @staticmethod
+    def _reason_line(decision: Any) -> str:
+        if decision.action == DecisionAction.BUY:
+            return "매수 조건 충족"
+        if decision.action == DecisionAction.SELL:
+            labels = [EXIT_TRIGGER_LABELS.get(r, r.value) for r in decision.exit_reasons]
+            return "청산 신호: " + ("·".join(labels) if labels else "사유 미상")
+        labels = _short_reason_labels(decision.blocking_reasons)
+        if not labels:
+            return "판단 보류"
+        return "확인 필요: " + "·".join(labels[:4])
+
+    @staticmethod
+    def _price_detail(rule: InstrumentWatchRule, quote: Any) -> str:
+        if rule.price is None:
+            return ""
+        if rule.price.recovery_min is not None:
+            arrow = "↑" if quote.price >= rule.price.recovery_min else "↓"
+            return f"(회복선 {rule.price.recovery_min:,.0f}원{arrow})"
+        if rule.price.buy_zone_min is not None and rule.price.buy_zone_max is not None:
+            return f"(매수구간 {rule.price.buy_zone_min:,.0f}~{rule.price.buy_zone_max:,.0f})"
+        if rule.price.no_chase_above is not None:
+            return f"(상한 {rule.price.no_chase_above:,.0f})"
+        return ""
+
+    def _checklist_line(
+        self,
+        rule: InstrumentWatchRule,
+        quote: Any,
+        signals: Any,
+        kospi_change_pct: float | None,
+        gate_result: Any,
+        ai_power_result: AIPowerGateResult | None,
+    ) -> str:
+        rs_detail = f"(KOSPI {kospi_change_pct:+.2f}%)" if kospi_change_pct is not None else ""
+        entries = [
+            f"{GATE_EMOJI[signals.relative_strength_gate]}상대강도{rs_detail}",
+            f"{GATE_EMOJI[signals.price_gate]}가격{self._price_detail(rule, quote)}",
+            f"{GATE_EMOJI[signals.flow_gate]}수급",
+        ]
+        if rule.governance_esr_gate != SignalState.NOT_APPLICABLE:
+            entries.append(f"{GATE_EMOJI[rule.governance_esr_gate]}지배구조")
+        if ai_power_result is not None:
+            entries.append(f"{GATE_EMOJI[ai_power_result.state]}AI Power")
+        elif rule.ai_power_gate != SignalState.NOT_APPLICABLE:
+            entries.append(f"{GATE_EMOJI[rule.ai_power_gate]}AI Power")
+        entries.append(f"{THESIS_EMOJI[rule.thesis_state]}논지")
+        if gate_result is not None:
+            portfolio_emoji = "✅" if gate_result.final_allowed_qty > 0 else "❌"
+            entries.append(f"{portfolio_emoji}계좌한도")
+        else:
+            entries.append("➖계좌한도")
+        return "  ".join(entries)
 
     @staticmethod
     def _quote_line(quote: Any) -> str:

@@ -63,9 +63,9 @@ def test_registered_name_resolves_but_missing_gates_force_hold_zero_qty() -> Non
 
     assert quote.calls == ["005930"]
     assert "삼성전자 (005930)" in result
-    assert "판단: 🟡 보류 / 추천수량 0주" in result
-    assert "Price=FAIL" in result
-    assert "다일 수급 추세" in result
+    assert "🟡 보류 / 0주" in result
+    assert "❌가격" in result
+    assert "확인 필요" in result
 
 
 def test_exact_unregistered_ticker_is_quoted_but_never_given_buy_signal() -> None:

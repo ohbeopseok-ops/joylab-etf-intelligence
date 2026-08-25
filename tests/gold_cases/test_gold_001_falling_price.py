@@ -116,6 +116,6 @@ def test_gold_001_t_plus_one_relative_strength_fails_via_real_pipeline():
     result = service.handle("/analyze 005930")
 
     assert quote_client.calls == ["005930"]
-    assert "상대강도=FAIL (KOSPI +0.74%)" in result
-    assert "RELATIVE_STRENGTH_GATE_FAIL" in result
-    assert "판단: 🟡 보류 / 추천수량 0주" in result
+    assert "❌상대강도(KOSPI +0.74%)" in result
+    assert "상대강도" in result.splitlines()[4]  # 확인 필요 reason line names it
+    assert "🟡 보류 / 0주" in result
