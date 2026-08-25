@@ -21,6 +21,13 @@ from joylab_etf.intelligence.portfolio_state import PortfolioDataUnavailable, Po
 
 SYMBOL_PATTERN = re.compile(r"^[0-9A-Z]{6}$")
 
+CASH_PATTERN = re.compile(r"^현금\s*(얼마|있어)")
+AFFORD_PATTERN = re.compile(r"^(.+?)\s*(\d+)\s*만\s*원?\s*추가매수\s*가능")
+QUANTITY_PATTERN = re.compile(r"^(?:내\s*)?(.+?)\s*몇\s*주\s*(있어|보유)?")
+AVG_PRICE_PATTERN = re.compile(r"^(?:내\s*)?(.+?)\s*평단은?\b")
+WEIGHT_PATTERN = re.compile(r"^(?:내\s*)?(.+?)\s*(?:현재\s*)?비중은?\b")
+ORDERABLE_PATTERN = re.compile(r"^(?:(.+?)\s*)?주문가능금액")
+
 ACTION_EMOJI = {
     DecisionAction.BUY: "🟢",
     DecisionAction.HOLD: "🟡",
@@ -74,6 +81,32 @@ class StockAssistantService:
 
         if raw in {"/portfolio", "/계좌", "/포트폴리오", "내 계좌", "내 계좌 보여줘", "포트폴리오"}:
             return self.portfolio_summary()
+
+        if CASH_PATTERN.match(raw):
+            return self._cash_query()
+
+        match = AFFORD_PATTERN.match(raw)
+        if match:
+            return self._afford_query(match.group(1), match.group(2))
+
+        match = QUANTITY_PATTERN.match(raw)
+        if match:
+            return self._quantity_query(match.group(1))
+
+        match = AVG_PRICE_PATTERN.match(raw)
+        if match:
+            return self._avg_price_query(match.group(1))
+
+        match = WEIGHT_PATTERN.match(raw)
+        if match:
+            return self._weight_query(match.group(1))
+
+        match = ORDERABLE_PATTERN.match(raw)
+        if match:
+            name_query = match.group(1)
+            if not name_query:
+                return "어느 종목 기준 주문가능금액인지 알려주세요 (예: 삼성전자 주문가능금액 얼마야?)."
+            return self._orderable_query(name_query)
 
         parts = raw.split(maxsplit=1)
         command = parts[0].split("@", 1)[0].lower()
@@ -192,6 +225,124 @@ class StockAssistantService:
             f"({report.semiconductor_weight_pct_of_securities}% of 보유증권가치)"
         )
         return "\n".join(lines)
+
+    def _exposure_report(self) -> tuple[Any, list[Any], Any] | str:
+        """(report, positions, summary) or an error string to return directly."""
+        if self.portfolio_provider is None:
+            return "실계좌 연동이 설정되지 않았습니다 (KIS_ACCOUNT_NO/PRODUCT_CODE 미설정)."
+        try:
+            return self.portfolio_provider.get_exposure_report()
+        except PortfolioDataUnavailable as exc:
+            return f"실계좌 연동이 설정되지 않았습니다: {exc}"
+        except Exception as exc:
+            return f"계좌 조회 중 오류가 발생했습니다: {type(exc).__name__}"
+
+    def _resolve_or_message(self, name_query: str) -> str:
+        symbol = self.resolve_symbol(name_query)
+        if symbol is None:
+            return (
+                "티커를 추측하지 않습니다. 정확한 6자리 영문·숫자 티커 또는 "
+                "등록된 종목명을 입력해 주세요."
+            )
+        return symbol
+
+    def _cash_query(self) -> str:
+        result = self._exposure_report()
+        if isinstance(result, str):
+            return result
+        _report, _positions, summary = result
+        if summary.cash is None:
+            return "현금 잔고를 KIS에서 받지 못했습니다 (UNKNOWN)."
+        return f"현금: {summary.cash:,.0f}원"
+
+    def _quantity_query(self, name_query: str) -> str:
+        symbol = self._resolve_or_message(name_query)
+        if not SYMBOL_PATTERN.fullmatch(symbol):
+            return symbol  # was an error message
+        result = self._exposure_report()
+        if isinstance(result, str):
+            return result
+        _report, positions, _summary = result
+        position = next((p for p in positions if p.symbol == symbol), None)
+        if position is None:
+            return f"{name_query} 직접 보유 수량: 0주 (미보유, ETF 내 간접 보유는 별도)"
+        return f"{position.name} ({position.symbol}) 직접 보유수량: {position.quantity:,.0f}주"
+
+    def _avg_price_query(self, name_query: str) -> str:
+        symbol = self._resolve_or_message(name_query)
+        if not SYMBOL_PATTERN.fullmatch(symbol):
+            return symbol
+        result = self._exposure_report()
+        if isinstance(result, str):
+            return result
+        _report, positions, _summary = result
+        position = next((p for p in positions if p.symbol == symbol), None)
+        if position is None or position.avg_price is None:
+            return f"{name_query} 직접 보유가 없어 평단이 없습니다 (또는 KIS 미제공/UNKNOWN)."
+        return f"{position.name} ({position.symbol}) 평단: {position.avg_price:,.0f}원"
+
+    def _weight_query(self, name_query: str) -> str:
+        symbol = self._resolve_or_message(name_query)
+        if not SYMBOL_PATTERN.fullmatch(symbol):
+            return symbol
+        result = self._exposure_report()
+        if isinstance(result, str):
+            return result
+        report, _positions, summary = result
+        row = next((r for r in report.rows if r.symbol == symbol), None)
+        if row is None:
+            return f"{name_query} 노출 없음 (직접+ETF 간접 합산 0)"
+        if summary.total_evaluation:
+            weight_of_total = row.total_value / summary.total_evaluation * 100
+            return (
+                f"{row.name} ({row.symbol}) 비중: 계좌 총평가금액 대비 {weight_of_total:.2f}%, "
+                f"보유증권가치 대비 {row.portfolio_weight_pct}% "
+                f"(직접 {row.direct_value:,.0f}원 + 간접 {row.indirect_value:,.0f}원)"
+            )
+        return f"{row.name} ({row.symbol}) 비중(보유증권가치 대비): {row.portfolio_weight_pct}%"
+
+    def _orderable_query(self, name_query: str) -> str:
+        symbol = self._resolve_or_message(name_query)
+        if not SYMBOL_PATTERN.fullmatch(symbol):
+            return symbol
+        if self.portfolio_provider is None:
+            return "실계좌 연동이 설정되지 않았습니다."
+        try:
+            quote = self.quote_client.get_domestic_quote(symbol)
+            bp = self.portfolio_provider.get_buying_power(symbol, quote.price)
+        except PortfolioDataUnavailable as exc:
+            return f"실계좌 연동이 설정되지 않았습니다: {exc}"
+        except Exception as exc:
+            return f"매수가능금액 조회 중 오류가 발생했습니다: {type(exc).__name__}"
+        if bp.no_credit_buy_qty is None or bp.no_credit_buy_amount is None:
+            return "매수가능금액을 KIS에서 받지 못했습니다 (UNKNOWN)."
+        return (
+            f"{symbol} 기준 미수 없는 매수가능금액: {bp.no_credit_buy_amount:,.0f}원 "
+            f"({int(bp.no_credit_buy_qty):,}주, 기준가 {quote.price:,}원)"
+        )
+
+    def _afford_query(self, name_query: str, amount_10k_str: str) -> str:
+        symbol = self._resolve_or_message(name_query)
+        if not SYMBOL_PATTERN.fullmatch(symbol):
+            return symbol
+        amount = int(amount_10k_str) * 10_000
+        try:
+            quote = self.quote_client.get_domestic_quote(symbol)
+        except Exception as exc:
+            return f"시세 조회 중 오류가 발생했습니다: {type(exc).__name__}"
+        gate_result, fallback_reason = self._portfolio_gate(symbol, symbol, quote.price)
+        if gate_result is None:
+            return (
+                f"{amount:,}원 추가매수 가능 여부를 판단할 수 없습니다 ({fallback_reason}). "
+                "이 종목의 클러스터에는 portfolio_policy.json 한도가 없거나 계좌 데이터가 없습니다."
+            )
+        requested_qty = int(amount // quote.price) if quote.price > 0 else 0
+        can_afford = requested_qty > 0 and requested_qty <= gate_result.final_allowed_qty
+        return (
+            f"{symbol} {amount:,}원 추가매수: {'가능' if can_afford else '불가'} "
+            f"(요청 {requested_qty}주 필요, Portfolio Gate 허용 {gate_result.final_allowed_qty}주, "
+            f"현재가 {quote.price:,}원)"
+        )
 
     def _portfolio_gate(self, symbol: str, name: str, current_price: float) -> tuple[Any, str]:
         """(GateResult|None, fallback_reason). fallback_reason is only
