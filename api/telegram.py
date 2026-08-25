@@ -103,6 +103,7 @@ class handler(BaseHTTPRequestHandler):
         chat = message.get("chat") if isinstance(message, dict) else None
         text = message.get("text") if isinstance(message, dict) else None
         chat_id = chat.get("id") if isinstance(chat, dict) else None
+        print(f"[diag] incoming chat_id={chat_id!r} text={text!r}")
 
         if not isinstance(chat_id, int) or not isinstance(text, str):
             print(f"[diag] skip: chat_id_type={type(chat_id).__name__} text_type={type(text).__name__}")
