@@ -131,4 +131,10 @@ class KISClient:
             change_pct=to_float(output.get("prdy_ctrt")),
             volume=to_int(output.get("acml_vol")),
             timestamp=datetime.now(KST),
+            per=to_float(output.get("per")),
+            pbr=to_float(output.get("pbr")),
+            eps=to_float(output.get("eps")),
+            bps=to_float(output.get("bps")),
+            week52_high=to_float(output.get("w52_hgpr")),
+            week52_low=to_float(output.get("w52_lwpr")),
         )

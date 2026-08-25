@@ -16,9 +16,12 @@ from joylab_etf.intelligence.decision_engine import (
     InvestmentDecisionConfig,
     SignalState,
     ThesisState,
+    ValuationGateResult,
+    ValuationInput,
     evaluate_ai_power_gate,
     evaluate_instrument_rule,
     evaluate_investment_decision,
+    evaluate_valuation_gate,
 )
 from joylab_etf.intelligence.portfolio_state import PortfolioDataUnavailable, PortfolioStateProvider
 
@@ -43,7 +46,6 @@ ACTION_EMOJI = {
 # the day one of them becomes real (a rule starts setting it), removing
 # it here is a one-line change.
 STRUCTURALLY_UNIMPLEMENTED_GATES = {
-    "VALUATION",
     "FUNDAMENTAL_EPS",
     "STRATEGY",
     "SEMICONDUCTOR",
@@ -55,6 +57,7 @@ REASON_LABELS: list[tuple[str, str]] = [
     ("PRICE_GATE", "가격"),
     ("FLOW_GATE", "수급"),
     ("RELATIVE_STRENGTH_GATE", "상대강도"),
+    ("VALUATION_", "밸류에이션"),
     ("DATA_CONFIDENCE_GATE", "데이터 최신성"),
     ("STALE_STRATEGY_RULE", "데이터 최신성"),
     ("GOVERNANCE_ESR_GATE", "지배구조/주주환원"),
@@ -248,6 +251,18 @@ class StockAssistantService:
         else:
             ai_power_gate = rule.ai_power_gate
 
+        valuation_result = evaluate_valuation_gate(
+            ValuationInput(
+                per=quote.per,
+                pbr=quote.pbr,
+                eps=quote.eps,
+                bps=quote.bps,
+                week52_high=quote.week52_high,
+                week52_low=quote.week52_low,
+            ),
+            self.decision_config.valuation_policy,
+        )
+
         decision = evaluate_investment_decision(
             DecisionInput(
                 symbol=symbol,
@@ -257,6 +272,7 @@ class StockAssistantService:
                 relative_strength_gate=signals.relative_strength_gate,
                 strategy_gate=SignalState.UNKNOWN,
                 data_confidence_gate=signals.data_confidence_gate,
+                valuation_gate=valuation_result.state,
                 governance_esr_gate=rule.governance_esr_gate,
                 ai_power_gate=ai_power_gate,
                 thesis_state=rule.thesis_state,
@@ -265,7 +281,7 @@ class StockAssistantService:
             )
         )
         return self._ruled_report(
-            rule, quote, flow, signals, decision, kospi_change_pct, gate_result, ai_power_result
+            rule, quote, flow, signals, decision, kospi_change_pct, gate_result, ai_power_result, valuation_result
         )
 
     def portfolio_summary(self) -> str:
@@ -495,6 +511,7 @@ class StockAssistantService:
         kospi_change_pct: float | None,
         gate_result: Any = None,
         ai_power_result: AIPowerGateResult | None = None,
+        valuation_result: ValuationGateResult | None = None,
     ) -> str:
         lines = [
             f"{rule.name} ({rule.symbol})",
@@ -502,7 +519,9 @@ class StockAssistantService:
             self._flow_line(flow),
             f"{ACTION_EMOJI[decision.action]} {decision.action.value} / {decision.recommended_qty}주",
             self._reason_line(decision),
-            self._checklist_line(rule, quote, signals, kospi_change_pct, gate_result, ai_power_result),
+            self._checklist_line(
+                rule, quote, signals, kospi_change_pct, gate_result, ai_power_result, valuation_result
+            ),
         ]
         if ai_power_result is not None and ai_power_result.unknown_rotation_checks:
             lines.append(
@@ -540,6 +559,18 @@ class StockAssistantService:
             return f"(상한 {rule.price.no_chase_above:,.0f})"
         return ""
 
+    @staticmethod
+    def _valuation_detail(valuation_result: ValuationGateResult) -> str:
+        percentiles = [
+            p
+            for p in (valuation_result.per_percentile, valuation_result.pbr_percentile)
+            if p is not None
+        ]
+        if not percentiles:
+            return ""
+        avg = sum(percentiles) / len(percentiles)
+        return f"(52주밴드 {avg * 100:.0f}%)"
+
     def _checklist_line(
         self,
         rule: InstrumentWatchRule,
@@ -548,6 +579,7 @@ class StockAssistantService:
         kospi_change_pct: float | None,
         gate_result: Any,
         ai_power_result: AIPowerGateResult | None,
+        valuation_result: ValuationGateResult | None = None,
     ) -> str:
         rs_detail = f"(KOSPI {kospi_change_pct:+.2f}%)" if kospi_change_pct is not None else ""
         entries = [
@@ -555,6 +587,10 @@ class StockAssistantService:
             f"{GATE_EMOJI[signals.price_gate]}가격{self._price_detail(rule, quote)}",
             f"{GATE_EMOJI[signals.flow_gate]}수급",
         ]
+        if valuation_result is not None:
+            entries.append(
+                f"{GATE_EMOJI[valuation_result.state]}밸류{self._valuation_detail(valuation_result)}"
+            )
         if rule.governance_esr_gate != SignalState.NOT_APPLICABLE:
             entries.append(f"{GATE_EMOJI[rule.governance_esr_gate]}지배구조")
         if ai_power_result is not None:
