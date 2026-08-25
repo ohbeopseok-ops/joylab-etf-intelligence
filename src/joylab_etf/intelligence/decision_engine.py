@@ -90,6 +90,10 @@ class InstrumentWatchRule(BaseModel):
     # NOT_APPLICABLE means "not yet assessed", not "passes".
     governance_esr_gate: SignalState = SignalState.NOT_APPLICABLE
     ai_power_gate: SignalState = SignalState.NOT_APPLICABLE
+    # When set, ai_power_gate above is ignored and recomputed live via
+    # evaluate_ai_power_gate(ai_power_watch, ai_power_policy) instead --
+    # this is the actual Gate 10 formula, not a hand-set label.
+    ai_power_watch: "AIPowerWatchInput | None" = None
 
     @model_validator(mode="after")
     def validate_dates(self) -> "InstrumentWatchRule":
@@ -234,6 +238,9 @@ class AIPowerWatchInput(BaseModel):
     revenue_recognition: SignalState = SignalState.UNKNOWN
     operating_margin: SignalState = SignalState.UNKNOWN
     eps_revision: SignalState = SignalState.UNKNOWN
+
+
+InstrumentWatchRule.model_rebuild()
 
 
 class AIPowerPolicy(BaseModel):

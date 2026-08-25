@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from joylab_etf.intelligence.decision_engine import (
+    AIPowerGateResult,
     DecisionAction,
     DecisionInput,
     InstrumentObservation,
@@ -14,6 +15,7 @@ from joylab_etf.intelligence.decision_engine import (
     InvestmentDecisionConfig,
     SignalState,
     ThesisState,
+    evaluate_ai_power_gate,
     evaluate_instrument_rule,
     evaluate_investment_decision,
 )
@@ -169,6 +171,22 @@ class StockAssistantService:
         portfolio_blocking_reasons = (
             gate_result.blocking_reasons if gate_result else [portfolio_fallback_reason]
         )
+
+        ai_power_result: AIPowerGateResult | None = None
+        if rule.ai_power_watch is not None:
+            # etf_outperforms_kospi is live-computed the same way stock
+            # relative strength is (today's change% vs KOSPI's) whenever an
+            # index client is configured, overriding whatever stale value
+            # sits in the stored watch file -- the 5-item rotation checklist
+            # and revenue-translation fields stay as last hand-set, though.
+            watch = rule.ai_power_watch
+            if relative_strength_pass is not None:
+                watch = watch.model_copy(update={"etf_outperforms_kospi": relative_strength_pass})
+            ai_power_result = evaluate_ai_power_gate(watch, self.decision_config.ai_power_policy)
+            ai_power_gate = ai_power_result.state
+        else:
+            ai_power_gate = rule.ai_power_gate
+
         decision = evaluate_investment_decision(
             DecisionInput(
                 symbol=symbol,
@@ -179,13 +197,15 @@ class StockAssistantService:
                 strategy_gate=SignalState.UNKNOWN,
                 data_confidence_gate=signals.data_confidence_gate,
                 governance_esr_gate=rule.governance_esr_gate,
-                ai_power_gate=rule.ai_power_gate,
+                ai_power_gate=ai_power_gate,
                 thesis_state=ThesisState.UNKNOWN,
                 portfolio_allowed_qty=portfolio_allowed_qty,
                 portfolio_blocking_reasons=portfolio_blocking_reasons,
             )
         )
-        return self._ruled_report(rule, quote, flow, signals, decision, kospi_change_pct, gate_result)
+        return self._ruled_report(
+            rule, quote, flow, signals, decision, kospi_change_pct, gate_result, ai_power_result
+        )
 
     def portfolio_summary(self) -> str:
         if self.portfolio_provider is None:
@@ -413,6 +433,7 @@ class StockAssistantService:
         decision: Any,
         kospi_change_pct: float | None,
         gate_result: Any = None,
+        ai_power_result: AIPowerGateResult | None = None,
     ) -> str:
         notes = "; ".join(rule.notes) if rule.notes else "등록된 추가 조건 없음"
         blockers = ", ".join(decision.blocking_reasons)
@@ -433,7 +454,13 @@ class StockAssistantService:
         )
         if rule.governance_esr_gate != SignalState.NOT_APPLICABLE:
             gate_line += f", Governance/ESR={rule.governance_esr_gate.value}"
-        if rule.ai_power_gate != SignalState.NOT_APPLICABLE:
+        if ai_power_result is not None:
+            gate_line += (
+                f", AIPower={ai_power_result.state.value} "
+                f"(rotation {ai_power_result.rotation_score}/5 {ai_power_result.rotation_level.value}, "
+                f"revenue={ai_power_result.revenue_translation_state.value})"
+            )
+        elif rule.ai_power_gate != SignalState.NOT_APPLICABLE:
             gate_line += f", AIPower={rule.ai_power_gate.value}"
 
         lines = [
@@ -443,6 +470,10 @@ class StockAssistantService:
             f"판단: {ACTION_EMOJI[decision.action]} {decision.action.value} / 추천수량 {decision.recommended_qty}주",
             gate_line,
         ]
+        if ai_power_result is not None and ai_power_result.unknown_rotation_checks:
+            lines.append(
+                f"AI Power 미확인 체크리스트: {', '.join(ai_power_result.unknown_rotation_checks)}"
+            )
         if gate_result is not None:
             lines.append(
                 f"실계좌 노출도: {gate_result.true_exposure_before:,.0f}원 "

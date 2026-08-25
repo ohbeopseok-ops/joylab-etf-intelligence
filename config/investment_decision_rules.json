@@ -89,9 +89,13 @@
       "valid_through": "2026-08-26",
       "ticker_source_url": "https://www.samsungfund.com/etf/product/view.do?id=2ETFN7",
       "price": {"recovery_min": 32500},
+      "ai_power_watch": {
+        "etf_outperforms_kospi": false
+      },
       "notes": [
         "AI Power watchlist priority does not imply BUY",
-        "ETF relative strength and Revenue Translation must also pass"
+        "ETF relative strength and Revenue Translation must also pass",
+        "AI Power Watch: etf_outperforms_kospi는 봇이 매번 라이브로 재계산해 이 값을 덮어씀 (당일 등락률 vs KOSPI). 아래 저장값은 2026-08-25 오전 -4.79% 시점 기록일 뿐 fallback -- 5개 rotation 체크리스트 개별 항목과 revenue translation 4항목은 여전히 미확인, see docs/JOYLAB_INVESTMENT_ENGINE.md section 10"
       ]
     }
   ]
