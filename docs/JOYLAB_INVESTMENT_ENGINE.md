@@ -431,28 +431,24 @@ JoyLab Investment Engine
 7. 장중/마감/주말 프롬프트는 분리해야 한다.
 ```
 
-## 16. Gate 목록 (구현 상태 추적용)
+## 16. Gate 목록 (구현 상태 추적용, 2026-08-25 야간 갱신)
 
 | # | Gate | 상태 | 코드 위치 |
 |---|------|------|-----------|
-| 1 | Price / Valuation | 부분 구현 | `intelligence/portfolio_gate.py`, `intelligence/true_exposure_v015.py` |
-| 2 | Flow (수급) | 미구현 | — 설계만 존재 (본 문서 §12) |
-| 3 | Relative Strength | 미구현 | — |
-| 4 | Fundamental / EPS Revision | 미구현 | — |
-| 5 | Thesis | 미구현 | — |
-| 6 | Governance / Effective Shareholder Return | 미구현 | — 설계만 존재 (본 문서 §3) |
-| 7 | Portfolio Concentration | 구현됨 | `intelligence/portfolio_gate.py` (Single Stock/Cluster/Split Buy Gate) |
-| 8 | Data Confidence | 미구현 | — 설계만 존재 (본 문서 §8), TASKS.md TASK-004 후보 |
+| 1 | Price / Valuation | 부분 구현 (라이브) | `intelligence/portfolio_gate.py`, `intelligence/true_exposure_v015.py`, `assistant/stock_assistant.py`(watch_rule 기반) |
+| 2 | Flow (수급) | 부분 구현 (라이브, 당일치만) | `kis/investor.py` — 개인/외국인/기관 순매수 라이브 조회. 다일 추세·연기금은 여전히 미구현 |
+| 3 | Relative Strength | **구현됨 (라이브)** | `kis/index.py`(KOSPI 지수 조회) + `assistant/stock_assistant.py::_relative_strength` — 당일 등락률 vs KOSPI 당일 등락률 비교. 다일 RS 라인 아님, 단순 당일 초과수익 비교임을 문서화함 |
+| 4 | Fundamental / EPS Revision | 미구현 | `decision_engine.py`에 `fundamental_eps_gate` 필드는 있으나 항상 NOT_APPLICABLE |
+| 5 | Thesis | 미구현 | `ThesisState` enum 존재, 항상 UNKNOWN으로 전달 |
+| 6 | Governance / Effective Shareholder Return | 계산기만 구현, 미연결 | `decision_engine.py::calculate_effective_shareholder_return`는 순수 함수로 존재하나 `StockAssistantService.analyze()`에서 호출 안 됨 — 입력값(배당/소각/자사주 금액)을 KIS에서 못 가져오므로 수동 입력 스키마 필요 |
+| 7 | Portfolio Concentration | 구현됨 (CLI만, 봇 미연결) | `intelligence/portfolio_gate.py`, `scripts/analyst.py`에서 실계좌 연동 확인됨. 텔레그램 봇에는 아직 미연결 (`portfolio_allowed_qty=0` 하드코딩) |
+| 8 | Data Confidence | 부분 구현 | `decision_engine.py::evaluate_data_confidence`, `InstrumentWatchRule.valid_through` 기반 STALE_STRATEGY_RULE 체크는 실제 작동 중 |
 | 9 | Semiconductor Gate | 부분 구현 | `ai_power_universe.json` clusters.semiconductor + `overlap.py` |
-| 10 | AI Power Gate | 미구현 | — 설계만 존재 (본 문서 §10) |
-| 11 | Korea Translation Gate | 미정의 | 본 대화에서 명칭만 언급, 세부 설계 없음 |
-| 12 | Pension Flow Rotation | 미구현 | — 설계만 존재 (본 문서 §11-12) |
+| 10 | AI Power Gate | 계산기만 구현, 미연결 | `decision_engine.py::evaluate_ai_power_gate`, `calculate_ai_power_score` 존재하나 봇에서 호출 안 됨 — rotation checklist 5개 항목이 정성 판단이라 대화형 입력 필요 |
+| 11 | Korea Translation Gate | 미정의 | 명칭만 언급, 세부 설계 없음 |
+| 12 | Pension Flow Rotation | 미구현 (KIS에 없음, 확인됨) | KIS 리테일 API에 종목별 연기금 순매수 엔드포인트가 없음을 라이브 확인 (`kis-open-trading-api-reference` 전수 검색) — 외부 소스 필요 |
 
-> **주의**: 저장소에 동시 작업 중인 것으로 확인된 `config/investment_decision_rules.json`,
-> `src/joylab_etf/intelligence/decision_engine.py` (2026-08-25 17:39 KST 작성, 커밋 안 됨)는
-> 위 표의 여러 Gate(특히 Price/Flow/Relative Strength, AI Power Gate rotation score)를
-> 이미 구현 시도 중인 것으로 보인다. 다음 세션은 이 파일의 존재와 완성도를 먼저 확인하고
-> 중복 구현을 피할 것.
+**텔레그램 봇 실사용 경로**: `joyfin_bot` → Vercel 웹훅(`feature/telegram-vercel-webhook`) → 라이브 시세+수급+상대강도 → `investment_decision_rules.json` watch_rule 매칭 → 🟡 보류/사자 답장. Core8 + AI Power ETF 5종 + 사용자 지정 32개 종목(`config/ticker_universe.json`)까지 한글 이름으로 조회 가능. Governance/AI Power Gate는 다음 단계.
 
 ## 17. LLM에게 넘길 핵심 지시문 (원문 보존)
 
