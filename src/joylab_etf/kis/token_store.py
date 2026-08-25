@@ -1,11 +1,18 @@
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
-TOKEN_DIR = Path("tokens")
+# Vercel's deployed code directory is read-only at runtime; only /tmp is
+# writable, and it's local to a single (possibly short-lived) container --
+# this reduces but does not eliminate KIS's per-minute token-issuance limit
+# for the serverless webhook. The local dev/long-polling process doesn't
+# need this at all since it reuses one in-memory KISClient for its whole
+# run; this path only matters for repeated cold starts.
+TOKEN_DIR = Path("/tmp/joylab_tokens") if os.getenv("VERCEL") else Path("tokens")
 TOKEN_PATH = TOKEN_DIR / "kis_token.json"
 
 @dataclass
