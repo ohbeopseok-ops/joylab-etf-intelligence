@@ -492,7 +492,39 @@ EPS Revision을 확인하라.
 중 하나로 출력하라.
 ```
 
-## 18. 한 줄 요약
+## 18. 전세계 투자 분석 기법 지도 (참고자료, 2026-08-25)
+
+사용자가 CFA Institute/AQR/BlackRock 자료를 근거로 정리해 공유한 15개 분석 기법
+카테고리(Fundamental, Quality, Value, Growth, Factor, Momentum, Technical, Flow,
+Macro, Sector Rotation, Quant, Portfolio Construction, Risk Management,
+Alternative, Behavioral Finance) 전문은 대화 기록에 있음 -- 이 문서에는 전문을
+복사하지 않고, JoyLab 게이트와의 매핑과 구현 상태만 남긴다.
+
+### 사용자가 분류한 우선순위 대비 실제 구현 상태 (2026-08-25 기준)
+
+**1순위 (사용자 표현: "이미 쓰는 것")**
+
+| 항목 | 실제 상태 |
+|---|---|
+| Flow Analysis | 구현됨 -- 외국인/기관/개인 순매수, 일부 종목 연기금 스트릭 (NAVER) |
+| Relative Strength | 구현됨 -- KOSPI 대비 당일 초과수익, GOLD-001 회귀테스트로 고정됨 |
+| Sector Rotation | 부분 구현 -- AI Power Gate 로테이션 체크리스트만 있고, 일반 섹터 로테이션 지표는 없음 |
+| Valuation | 미구현 -- `valuation_gate`는 항상 UNKNOWN (아무 데서도 계산 안 함) |
+| Thesis Break | 부분 구현 -- ThesisState 필드/SELL 트리거는 있으나, 5개 종목만 수동 입력됨 |
+| Portfolio Concentration | 부분 구현 -- semiconductor 클러스터만 정책 존재, 나머지 클러스터는 정책 미정의 |
+| Data Confidence | 구현됨 -- as_of_date/valid_through 신선도 체크 |
+
+**2순위/3순위 (Factor Model, EPS Revision, Risk Parity/Kelly, VaR, Black-Litterman 등)**
+전부 미착수. 착수 전 반드시 이 문서 상단 규칙대로 새 TASK 문서로 스코프를 확정할 것 --
+"전세계에서 쓰는 기법"이라는 이유만으로 구현하지 않는다.
+
+### 이번 세션에서 이미 이 지도의 일부를 실제로 적용한 사례
+
+- LS ELECTRIC/삼성화재 `recovery_min`을 60일 이동평균선(Technical Analysis >
+  Moving Average Trend)으로 계산 -- 사용자가 "전세계 투자 분석기법을 차용해도 좋다"고
+  명시적으로 승인한 뒤 적용. `src/joylab_etf/kis/daily_price.py` 참고.
+
+## 19. 한 줄 요약
 
 이 프로젝트는 "삼성전자 빠졌네, 살까?"가 아니라, 반도체 급락장에서 가격·수급·상대강도·
 주주환원 품질·연기금 Rotation·AI CAPEX 병목·전력 인프라 수혜·포트폴리오 집중도를 통합해,
