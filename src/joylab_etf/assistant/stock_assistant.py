@@ -198,7 +198,7 @@ class StockAssistantService:
                 data_confidence_gate=signals.data_confidence_gate,
                 governance_esr_gate=rule.governance_esr_gate,
                 ai_power_gate=ai_power_gate,
-                thesis_state=ThesisState.UNKNOWN,
+                thesis_state=rule.thesis_state,
                 portfolio_allowed_qty=portfolio_allowed_qty,
                 portfolio_blocking_reasons=portfolio_blocking_reasons,
             )
@@ -437,11 +437,13 @@ class StockAssistantService:
     ) -> str:
         notes = "; ".join(rule.notes) if rule.notes else "등록된 추가 조건 없음"
         blockers = ", ".join(decision.blocking_reasons)
-        unconfirmed = ["다일 수급 추세", "연기금", "기업가치·EPS", "투자논지"]
+        unconfirmed = ["다일 수급 추세", "연기금", "기업가치·EPS"]
         if kospi_change_pct is None:
             unconfirmed.insert(0, "상대강도")
         if rule.governance_esr_gate == SignalState.NOT_APPLICABLE:
             unconfirmed.append("지배구조/ESR")
+        if rule.thesis_state == ThesisState.UNKNOWN:
+            unconfirmed.append("투자논지")
         if self.portfolio_provider is None:
             unconfirmed.append("실계좌 포트폴리오")
 
@@ -451,6 +453,7 @@ class StockAssistantService:
             f"상대강도={signals.relative_strength_gate.value}"
             + (f" (KOSPI {kospi_change_pct:+.2f}%)" if kospi_change_pct is not None else "")
             + f", 데이터={signals.data_confidence_gate.value}"
+            + f", Thesis={rule.thesis_state.value}"
         )
         if rule.governance_esr_gate != SignalState.NOT_APPLICABLE:
             gate_line += f", Governance/ESR={rule.governance_esr_gate.value}"
