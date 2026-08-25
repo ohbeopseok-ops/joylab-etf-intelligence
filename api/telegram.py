@@ -105,19 +105,24 @@ class handler(BaseHTTPRequestHandler):
         chat_id = chat.get("id") if isinstance(chat, dict) else None
 
         if not isinstance(chat_id, int) or not isinstance(text, str):
+            print(f"[diag] skip: chat_id_type={type(chat_id).__name__} text_type={type(text).__name__}")
             return
 
         try:
             service, client, telegram_settings = build_service_and_client()
-        except Exception:
+        except Exception as exc:
+            print(f"[diag] build_service_and_client failed: {type(exc).__name__}: {exc}")
             return  # misconfigured env vars -- nothing safe to reply with
 
         if chat_id not in telegram_settings.allowed_chat_ids:
+            print(f"[diag] chat_id {chat_id} not in allowlist {sorted(telegram_settings.allowed_chat_ids)}")
             return
 
         try:
             response = service.handle(text)
-        except Exception:  # keep credentials/internal errors out of chat
+            print(f"[diag] service.handle ok, response_len={len(response)}")
+        except Exception as exc:  # keep credentials/internal errors out of chat
+            print(f"[diag] service.handle failed: {type(exc).__name__}: {exc}")
             response = (
                 "분석 중 오류가 발생했습니다. 로그에는 비밀값을 남기지 않았습니다. "
                 "데이터 연결 상태를 확인해 주세요."
@@ -125,5 +130,6 @@ class handler(BaseHTTPRequestHandler):
 
         try:
             client.send_message(chat_id, response)
-        except Exception:
-            pass
+            print("[diag] send_message ok")
+        except Exception as exc:
+            print(f"[diag] send_message failed: {type(exc).__name__}: {exc}")
