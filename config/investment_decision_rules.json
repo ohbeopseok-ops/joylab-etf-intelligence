@@ -49,7 +49,11 @@
       "as_of_date": "2026-08-25",
       "valid_through": "2026-08-26",
       "ticker_source_url": "https://www.samsungfund.com/etf/product/view.do?id=2ETF01",
-      "notes": ["Large-cap flow recovery required before adding"]
+      "thesis_state": "INTACT",
+      "notes": [
+        "Large-cap flow recovery required before adding",
+        "Thesis (2026-08-25, user-confirmed): 대형주 코어 베타 노출 전략 자체는 아직 유효"
+      ]
     },
     {
       "symbol": "005380",
