@@ -1,0 +1,79 @@
+{
+  "verified_on": "2026-08-25",
+  "verified_on_note": "Date the issuer/KRX source URLs below were checked. See live_kis_verification for actual KIS API confirmation.",
+  "live_kis_verification": {
+    "verified_on": "2026-08-25",
+    "method": "Live GET call to KIS inquire-component-stock-price (TR FHKST121600C0), real-account env, one call per symbol. Two initial EGW00201 rate-limit failures (0117V0, 434730) were retried successfully with added throttle; not ticker validity failures.",
+    "results": {
+      "487240": {"status": "OK", "constituent_count": 12, "weight_sum_pct": 100.02},
+      "491820": {"status": "OK", "constituent_count": 13, "weight_sum_pct": 100.01},
+      "0117V0": {"status": "OK", "constituent_count": 10, "weight_sum_pct": 100.00},
+      "0101N0": {"status": "OK", "constituent_count": 15, "weight_sum_pct": 99.99},
+      "434730": {"status": "OK", "constituent_count": 15, "weight_sum_pct": 99.99}
+    }
+  },
+  "etfs": [
+    {
+      "symbol": "487240",
+      "name": "KODEX AI전력핵심설비",
+      "ticker_source_url": "https://www.samsungfund.com/etf/product/view.do?id=2ETFN7",
+      "kis_constituents_verified": true
+    },
+    {
+      "symbol": "491820",
+      "name": "HANARO 전력설비투자",
+      "ticker_source_url": "https://www.hanaroetf.com/fund/24A384532ECE491A",
+      "kis_constituents_verified": true
+    },
+    {
+      "symbol": "0117V0",
+      "name": "TIGER 코리아AI전력기기TOP3플러스",
+      "ticker_source_url": "https://kind.krx.co.kr/external/2025/10/17/000106/20251017000250/68152.htm",
+      "kis_constituents_verified": true
+    },
+    {
+      "symbol": "0101N0",
+      "name": "RISE AI전력인프라",
+      "ticker_source_url": "https://www.riseetf.co.kr/prod/finderDetail/44J3?searchFlag=viewtab1",
+      "kis_constituents_verified": true
+    },
+    {
+      "symbol": "434730",
+      "name": "HANARO 원자력iSelect",
+      "ticker_source_url": "https://www.hanaroetf.com/fund/5012FAEBEF0D4FB7",
+      "kis_constituents_verified": true
+    }
+  ],
+  "core8": [
+    {"symbol": "005930", "name": "삼성전자"},
+    {"symbol": "000660", "name": "SK하이닉스"},
+    {"symbol": "010120", "name": "LS ELECTRIC"},
+    {"symbol": "066570", "name": "LG전자"},
+    {"symbol": "017670", "name": "SK텔레콤"},
+    {"symbol": "005380", "name": "현대차"},
+    {"symbol": "042660", "name": "한화오션"},
+    {"symbol": "105560", "name": "KB금융"}
+  ],
+  "clusters": {
+    "semiconductor": ["005930", "000660"],
+    "power_equipment": [
+      "010120",
+      "298040",
+      "267260",
+      "006260",
+      "001440",
+      "062040",
+      "103590",
+      "000500",
+      "006340",
+      "033100",
+      "229640",
+      "060370"
+    ]
+  },
+  "security_source_urls": [
+    "https://www.samsungfund.com/etf/product/view.do?id=2ETFC5",
+    "https://www.samsungfund.com/etf/product/view.do?id=2ETFC6",
+    "https://www.samsungfund.com/etf/product/view.do?id=2ETFN7"
+  ]
+}

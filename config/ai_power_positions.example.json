@@ -1,0 +1,9 @@
+{
+  "positions": [
+    {"etf_symbol": "487240", "market_value": 1000000},
+    {"etf_symbol": "491820", "market_value": 1000000},
+    {"etf_symbol": "0117V0", "market_value": 1000000},
+    {"etf_symbol": "0101N0", "market_value": 1000000},
+    {"etf_symbol": "434730", "market_value": 1000000}
+  ]
+}
