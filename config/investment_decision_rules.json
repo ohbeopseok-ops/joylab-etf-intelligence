@@ -103,6 +103,41 @@
       ]
     },
     {
+      "symbol": "010120",
+      "name": "LS ELECTRIC",
+      "as_of_date": "2026-08-25",
+      "valid_through": "2026-08-26",
+      "ticker_source_url": "https://www.samsungfund.com/etf/product/view.do?id=2ETFC5",
+      "price": {"recovery_min": 213640},
+      "flow": {
+        "require_foreign_selling_easing": true,
+        "require_institutional_selling_easing": true
+      },
+      "notes": [
+        "Price gate uses 60-trading-day SMA (globally standard trend-reclaim technique, user-approved 2026-08-25 in place of a hand-typed threshold) instead of a documented buy zone -- recovery_min=213,640원 computed live from KIS daily closes (20260528~20260824, 60 sessions) via KISDailyPriceAdapter; refresh by recomputing, not by asking the user for a new number.",
+        "Flow gate uses the same generic foreign/institutional-selling-easing filter as 005930 (no LS ELECTRIC-specific flow condition documented yet).",
+        "Thesis/Governance intentionally left UNKNOWN/NOT_APPLICABLE -- no documented view exists yet, and neither is derivable from price data.",
+        "AI Power Watch rotation checklist item 1 (LS ELECTRIC vs KOSPI +2%p) -- see docs/JOYLAB_INVESTMENT_ENGINE.md section 5 -- is about the SEPARATE 487240 ETF's rotation score, not this stock's own gate."
+      ]
+    },
+    {
+      "symbol": "000810",
+      "name": "삼성화재",
+      "as_of_date": "2026-08-25",
+      "valid_through": "2026-08-26",
+      "ticker_source_url": "https://www.samsungfund.com/etf/product/view.do?id=2ETFC5",
+      "price": {"recovery_min": 640883.33},
+      "flow": {
+        "require_foreign_selling_easing": true,
+        "require_institutional_selling_easing": true
+      },
+      "notes": [
+        "Price gate uses 60-trading-day SMA (globally standard trend-reclaim technique, user-approved 2026-08-25 in place of a hand-typed threshold) instead of a documented buy zone -- recovery_min=640,883.33원 computed live from KIS daily closes (20260528~20260824, 60 sessions) via KISDailyPriceAdapter; refresh by recomputing, not by asking the user for a new number.",
+        "Flow gate uses the same generic foreign/institutional-selling-easing filter as 005930 (no 삼성화재-specific flow condition documented yet).",
+        "Thesis/Governance intentionally left UNKNOWN/NOT_APPLICABLE -- no documented view exists yet, and neither is derivable from price data."
+      ]
+    },
+    {
       "symbol": "487240",
       "name": "KODEX AI전력핵심설비",
       "as_of_date": "2026-08-25",
