@@ -15,6 +15,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
+from joylab_etf.assistant.aliases import (
+    load_core8_aliases,
+    load_ticker_universe_aliases,
+)
 from joylab_etf.assistant.stock_assistant import StockAssistantService
 from joylab_etf.assistant.telegram import (
     TelegramAssistantApp,
@@ -28,6 +32,7 @@ from joylab_etf.kis.investor import KISInvestorAdapter
 
 RULES_PATH = ROOT / "config" / "investment_decision_rules.json"
 AI_POWER_PATH = ROOT / "config" / "ai_power_universe.json"
+TICKER_UNIVERSE_PATH = ROOT / "config" / "ticker_universe.json"
 
 
 def load_verified_etf_aliases(path: Path = AI_POWER_PATH) -> dict[str, str]:
@@ -44,6 +49,14 @@ def load_verified_etf_aliases(path: Path = AI_POWER_PATH) -> dict[str, str]:
     return aliases
 
 
+def load_all_aliases() -> dict[str, str]:
+    aliases: dict[str, str] = {}
+    aliases.update(load_ticker_universe_aliases(TICKER_UNIVERSE_PATH))
+    aliases.update(load_core8_aliases(AI_POWER_PATH))
+    aliases.update(load_verified_etf_aliases())
+    return aliases
+
+
 def build_app() -> TelegramAssistantApp:
     telegram_settings = TelegramSettings.from_env()
     kis_client = KISClient(Settings.from_env())
@@ -51,7 +64,7 @@ def build_app() -> TelegramAssistantApp:
         quote_client=kis_client,
         investor_client=KISInvestorAdapter(kis_client),
         decision_config=load_decision_config(RULES_PATH),
-        aliases=load_verified_etf_aliases(),
+        aliases=load_all_aliases(),
         request_delay_sec=0.35,
     )
     client = TelegramBotClient(telegram_settings)
