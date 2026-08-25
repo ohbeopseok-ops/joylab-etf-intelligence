@@ -41,7 +41,11 @@
       "ticker_source_url": "https://www.samsungfund.com/etf/product/view.do?id=2ETF01",
       "price": {"recovery_min": 1700000},
       "flow": {"require_foreign_selling_easing": true},
-      "notes": ["Semiconductor priority over Samsung only after confirmation"]
+      "thesis_state": "INTACT",
+      "notes": [
+        "Semiconductor priority over Samsung only after confirmation",
+        "Thesis (2026-08-25, inferred from user ticker-universe summary): remains on 최우선 실전 관찰, no thesis-broken signal raised"
+      ]
     },
     {
       "symbol": "069500",
@@ -66,7 +70,11 @@
         "buy_zone_max": 415000,
         "no_chase_above": 420000
       },
-      "notes": ["Do not chase strength above 420K"]
+      "thesis_state": "INTACT",
+      "notes": [
+        "Do not chase strength above 420K",
+        "Thesis (2026-08-25, inferred from user ticker-universe summary): remains on 최우선 실전 관찰, no thesis-broken signal raised"
+      ]
     },
     {
       "symbol": "066570",
@@ -75,7 +83,11 @@
       "valid_through": "2026-08-26",
       "ticker_source_url": "https://www.samsungfund.com/etf/product/view.do?id=2ETFC5",
       "price": {"recovery_min": 199000},
-      "notes": ["Market-relative strength must return after 199-200K recovery"]
+      "thesis_state": "INTACT",
+      "notes": [
+        "Market-relative strength must return after 199-200K recovery",
+        "Thesis (2026-08-25, inferred from user ticker-universe summary): remains on 핵심 관찰, no thesis-broken signal raised"
+      ]
     },
     {
       "symbol": "035420",
@@ -84,7 +96,11 @@
       "valid_through": "2026-08-26",
       "ticker_source_url": "https://www.samsungfund.com/etf/product/view.do?id=2ETFC5",
       "flow": {"min_pension_net_buy_streak_days": 3},
-      "notes": ["Pension rotation requires at least three consecutive buy days"]
+      "thesis_state": "INTACT",
+      "notes": [
+        "Pension rotation requires at least three consecutive buy days",
+        "Thesis (2026-08-25, inferred from user ticker-universe summary): remains on 최우선 실전 관찰, no thesis-broken signal raised"
+      ]
     },
     {
       "symbol": "487240",
