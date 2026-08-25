@@ -28,7 +28,10 @@ from joylab_etf.intelligence.decision_engine import (
     evaluate_instrument_rule,
     evaluate_investment_decision,
     evaluate_rule_based_decision,
+    evaluate_valuation_gate,
     load_decision_config,
+    ValuationInput,
+    ValuationPolicy,
 )
 
 
@@ -495,6 +498,62 @@ def test_ai_power_etf_rule_requires_32500_recovery():
         ),
     )
     assert recovered.price_gate == SignalState.PASS
+
+
+def test_valuation_gate_passes_when_per_and_pbr_near_52week_low():
+    result = evaluate_valuation_gate(
+        ValuationInput(
+            per=11, pbr=2.2, eps=1000, bps=5000, week52_low=10000, week52_high=20000
+        ),
+        ValuationPolicy(),
+    )
+    assert result.state == SignalState.PASS
+    assert result.per_percentile == pytest.approx(0.1)
+    assert result.pbr_percentile == pytest.approx(0.1)
+    assert result.blocking_reasons == []
+
+
+def test_valuation_gate_fails_when_per_and_pbr_near_52week_high():
+    result = evaluate_valuation_gate(
+        ValuationInput(
+            per=19, pbr=3.8, eps=1000, bps=5000, week52_low=10000, week52_high=20000
+        ),
+        ValuationPolicy(),
+    )
+    assert result.state == SignalState.FAIL
+    assert result.blocking_reasons == ["VALUATION_RICH_VS_52W_RANGE"]
+
+
+def test_valuation_gate_unknown_in_the_middle_of_the_band():
+    result = evaluate_valuation_gate(
+        ValuationInput(
+            per=15, pbr=3.0, eps=1000, bps=5000, week52_low=10000, week52_high=20000
+        ),
+        ValuationPolicy(),
+    )
+    assert result.state == SignalState.UNKNOWN
+    assert result.blocking_reasons == ["VALUATION_MID_RANGE"]
+
+
+def test_valuation_gate_unknown_never_guessed_when_data_missing():
+    result = evaluate_valuation_gate(ValuationInput(), ValuationPolicy())
+    assert result.state == SignalState.UNKNOWN
+    assert result.per_percentile is None
+    assert result.pbr_percentile is None
+    assert result.blocking_reasons == ["VALUATION_DATA_UNAVAILABLE"]
+
+
+def test_valuation_gate_degenerate_band_treated_as_missing_data():
+    result = evaluate_valuation_gate(
+        ValuationInput(
+            per=15, pbr=3.0, eps=1000, bps=5000, week52_low=15000, week52_high=15000
+        ),
+        ValuationPolicy(),
+    )
+    assert result.per_percentile is None
+    assert result.pbr_percentile is None
+    assert result.state == SignalState.UNKNOWN
+    assert result.blocking_reasons == ["VALUATION_DATA_UNAVAILABLE"]
 
 
 def test_public_rule_config_contains_no_portfolio_quantity_or_balance():

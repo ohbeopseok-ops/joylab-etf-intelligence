@@ -78,6 +78,12 @@ class _FixedQuoteClient:
             change=None,
             change_pct=self.change_pct,
             timestamp=datetime(2026, 8, 25, 15, 30),
+            per=None,
+            pbr=None,
+            eps=None,
+            bps=None,
+            week52_high=None,
+            week52_low=None,
         )
 
 

@@ -248,6 +248,103 @@ class AIPowerWatchInput(BaseModel):
 InstrumentWatchRule.model_rebuild()
 
 
+class ValuationInput(BaseModel):
+    per: float | None = None
+    pbr: float | None = None
+    eps: float | None = None
+    bps: float | None = None
+    week52_high: float | None = None
+    week52_low: float | None = None
+
+
+class ValuationGateResult(BaseModel):
+    state: SignalState
+    per_percentile: float | None
+    pbr_percentile: float | None
+    blocking_reasons: list[str]
+
+
+class ValuationPolicy(BaseModel):
+    # 52-week PER/PBR band position, not an absolute PER/PBR cutoff --
+    # deliberately relative to the instrument's own recent history so no
+    # per-ticker "fair PER" number has to be hand-typed. Tercile split is
+    # a standard relative-valuation convention (bottom third = cheap,
+    # top third = rich), not tuned per ticker.
+    cheap_percentile_max: float = Field(default=0.30, ge=0, le=1)
+    rich_percentile_min: float = Field(default=0.70, ge=0, le=1)
+
+
+def _band_percentile(current: float, low: float, high: float) -> float | None:
+    if high <= low:
+        return None
+    return round((current - low) / (high - low), 4)
+
+
+def evaluate_valuation_gate(
+    valuation: ValuationInput, policy: ValuationPolicy
+) -> ValuationGateResult:
+    """52-week PER/PBR band position -- an approximation, not exact
+    history: per_at_52w_low/high is computed as week52_price / today's
+    eps (or bps), not the EPS actually in effect on that past date. If
+    trailing EPS/BPS changed materially during the year, the band shifts
+    with it and the percentile is only indicative, not precise.
+    """
+    per_percentile = None
+    if (
+        valuation.per is not None
+        and valuation.eps is not None
+        and valuation.eps > 0
+        and valuation.week52_low is not None
+        and valuation.week52_high is not None
+    ):
+        per_percentile = _band_percentile(
+            valuation.per,
+            valuation.week52_low / valuation.eps,
+            valuation.week52_high / valuation.eps,
+        )
+
+    pbr_percentile = None
+    if (
+        valuation.pbr is not None
+        and valuation.bps is not None
+        and valuation.bps > 0
+        and valuation.week52_low is not None
+        and valuation.week52_high is not None
+    ):
+        pbr_percentile = _band_percentile(
+            valuation.pbr,
+            valuation.week52_low / valuation.bps,
+            valuation.week52_high / valuation.bps,
+        )
+
+    percentiles = [p for p in (per_percentile, pbr_percentile) if p is not None]
+    if not percentiles:
+        return ValuationGateResult(
+            state=SignalState.UNKNOWN,
+            per_percentile=per_percentile,
+            pbr_percentile=pbr_percentile,
+            blocking_reasons=["VALUATION_DATA_UNAVAILABLE"],
+        )
+
+    avg_percentile = sum(percentiles) / len(percentiles)
+    if avg_percentile <= policy.cheap_percentile_max:
+        state = SignalState.PASS
+        reasons: list[str] = []
+    elif avg_percentile >= policy.rich_percentile_min:
+        state = SignalState.FAIL
+        reasons = ["VALUATION_RICH_VS_52W_RANGE"]
+    else:
+        state = SignalState.UNKNOWN
+        reasons = ["VALUATION_MID_RANGE"]
+
+    return ValuationGateResult(
+        state=state,
+        per_percentile=per_percentile,
+        pbr_percentile=pbr_percentile,
+        blocking_reasons=reasons,
+    )
+
+
 class AIPowerPolicy(BaseModel):
     min_rotation_checks: int = Field(default=3, ge=1, le=5)
     require_etf_outperformance: bool = True
@@ -270,6 +367,7 @@ class InvestmentDecisionConfig(BaseModel):
         default_factory=AIPowerScorePolicy
     )
     opportunity_policy: OpportunityPolicy = Field(default_factory=OpportunityPolicy)
+    valuation_policy: ValuationPolicy = Field(default_factory=ValuationPolicy)
     watch_rules: list[InstrumentWatchRule]
 
 

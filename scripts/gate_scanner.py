@@ -11,9 +11,9 @@ portfolio_allowed_qty<=0 always adds PORTFOLIO_GATE_BLOCK, and
 strategy_gate is hardcoded UNKNOWN in analyze() itself -- together those
 mean DecisionAction.BUY is currently unreachable, so a scanner watching
 for "action flipped to BUY" would never fire. Watching individual gates
-(PRICE/FLOW/RELATIVE_STRENGTH/DATA_CONFIDENCE/AI_POWER) instead surfaces
-the same live signal analyze() would show, without requiring KIS account
-credentials in this workflow's secrets.
+(PRICE/FLOW/RELATIVE_STRENGTH/DATA_CONFIDENCE/VALUATION/AI_POWER)
+instead surfaces the same live signal analyze() would show, without
+requiring KIS account credentials in this workflow's secrets.
 
 Usage:
     python scripts/gate_scanner.py
@@ -40,8 +40,10 @@ from joylab_etf.intelligence.decision_engine import (
     InstrumentObservation,
     InstrumentWatchRule,
     InvestmentDecisionConfig,
+    ValuationInput,
     evaluate_ai_power_gate,
     evaluate_instrument_rule,
+    evaluate_valuation_gate,
     load_decision_config,
 )
 from joylab_etf.kis.client import KISClient
@@ -91,11 +93,24 @@ def scan_symbol(
     )
     signals = evaluate_instrument_rule(rule, observation)
 
+    valuation_result = evaluate_valuation_gate(
+        ValuationInput(
+            per=quote.per,
+            pbr=quote.pbr,
+            eps=quote.eps,
+            bps=quote.bps,
+            week52_high=quote.week52_high,
+            week52_low=quote.week52_low,
+        ),
+        config.valuation_policy,
+    )
+
     snapshot = {
         "PRICE": signals.price_gate.value,
         "FLOW": signals.flow_gate.value,
         "RELATIVE_STRENGTH": signals.relative_strength_gate.value,
         "DATA_CONFIDENCE": signals.data_confidence_gate.value,
+        "VALUATION": valuation_result.state.value,
     }
 
     if rule.ai_power_watch is not None:
