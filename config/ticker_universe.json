@@ -4,7 +4,7 @@
   "tickers": [
     {"symbol": "005930", "name": "삼성전자", "category": "core"},
     {"symbol": "069500", "name": "KODEX 200", "category": "core"},
-    {"symbol": "000660", "name": "SK하이닉스", "category": "core"},
+    {"symbol": "000660", "name": "SK하이닉스", "category": "core", "aliases": ["하이닉스"]},
     {"symbol": "005380", "name": "현대차", "category": "core"},
     {"symbol": "066570", "name": "LG전자", "category": "core"},
     {"symbol": "010120", "name": "LS ELECTRIC", "category": "core"},
