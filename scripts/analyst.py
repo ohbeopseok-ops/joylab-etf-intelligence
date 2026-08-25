@@ -34,7 +34,6 @@ UNKNOWN unless sourced elsewhere.
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 import time
 from datetime import date
@@ -44,13 +43,8 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from joylab_etf.config import Settings
-from joylab_etf.config_v014 import Settings as AccountSettings
 from joylab_etf.kis.client import KISClient
-from joylab_etf.kis.client_v0142 import KISClient as AccountClient
 from joylab_etf.kis.investor import KISInvestorAdapter
-from joylab_etf.kis.account import KISAccountAdapter
-from joylab_etf.kis.etf_v015 import KISETFAdapter
-from joylab_etf.kis.buying_power import KISBuyingPowerAdapter
 from joylab_etf.intelligence.decision_engine import (
     InstrumentObservation,
     InstrumentWatchRule,
@@ -58,37 +52,10 @@ from joylab_etf.intelligence.decision_engine import (
     evaluate_instrument_rule,
     load_decision_config,
 )
-from joylab_etf.intelligence.true_exposure_v015 import build_true_exposure_report
-from joylab_etf.intelligence.portfolio_gate import evaluate_portfolio_gate
-from joylab_etf.intelligence.portfolio_gate_models import GateInput, PortfolioGatePolicy
+from joylab_etf.intelligence.portfolio_state import PortfolioDataUnavailable, PortfolioStateProvider
 
 DEFAULT_RULES_PATH = ROOT / "config" / "investment_decision_rules.json"
-INSTRUMENTS_PATH = ROOT / "config" / "instruments.json"
-AI_POWER_UNIVERSE_PATH = ROOT / "config" / "ai_power_universe.json"
-PORTFOLIO_POLICY_PATH = ROOT / "config" / "portfolio_policy.json"
-
-
-def load_etf_and_cluster_membership() -> tuple[set[str], dict[str, str]]:
-    """ETF symbol set + {member_symbol: cluster_name} from the two config files.
-
-    Only "semiconductor" has a cap in portfolio_policy.json, so that's the
-    only cluster_name this script will ever pass to evaluate_portfolio_gate.
-    """
-    instruments = json.loads(INSTRUMENTS_PATH.read_text(encoding="utf-8"))
-    ai_power = json.loads(AI_POWER_UNIVERSE_PATH.read_text(encoding="utf-8"))
-
-    etf_symbols = set(instruments.get("etfs", []))
-    etf_symbols |= {etf["symbol"] for etf in ai_power.get("etfs", [])}
-
-    cluster_membership: dict[str, str] = {}
-    for cluster_name, symbols in instruments.get("clusters", {}).items():
-        for symbol in symbols:
-            cluster_membership[symbol] = cluster_name
-    for cluster_name, symbols in ai_power.get("clusters", {}).items():
-        for symbol in symbols:
-            cluster_membership.setdefault(symbol, cluster_name)
-
-    return etf_symbols, cluster_membership
+CONFIG_DIR = ROOT / "config"
 
 
 def find_watch_rule(
@@ -184,101 +151,34 @@ def main() -> None:
 
     print()
     print("=== Portfolio Gate (실계좌) ===")
+    portfolio = PortfolioStateProvider(CONFIG_DIR)
     try:
-        account_settings = AccountSettings.from_env()
-    except Exception as exc:
-        print(f"[SKIP] account settings not configured: {type(exc).__name__}: {exc}")
-        account_settings = None
+        gate_result = portfolio.get_gate_result(args.symbol, rule.name if rule else args.symbol, quote.price)
+    except PortfolioDataUnavailable as exc:
+        print(f"[SKIP] account settings not configured: {exc}")
+        gate_result = None
 
-    if account_settings is not None:
-        account_client = AccountClient(account_settings)
-        account = KISAccountAdapter(account_client, account_settings)
-        etf_adapter = KISETFAdapter(account_client)
-        buying_power = KISBuyingPowerAdapter(account_client, account_settings)
-
-        etf_symbols, cluster_membership = load_etf_and_cluster_membership()
-        policy = PortfolioGatePolicy(
-            **json.loads(PORTFOLIO_POLICY_PATH.read_text(encoding="utf-8"))
+    if gate_result is None:
+        print(
+            "[DATA_GAP] 이 종목의 클러스터에는 portfolio_policy.json 한도(%)가 "
+            "정의되어 있지 않거나 계좌 총평가금액을 받지 못했습니다. 근거/백테스트 "
+            "없이 캡을 임의로 만들지 않으므로 Portfolio Gate 계산을 생략합니다."
         )
-
-        positions, summary = account.get_balance()
-        total_account_value = summary.total_evaluation
-
-        etf_snapshots = {}
-        for p in positions:
-            if p.symbol in etf_symbols and p.quantity > 0:
-                time.sleep(0.3)
-                etf_snapshots[p.symbol] = etf_adapter.get_components(p.symbol)
-
-        semiconductor_symbols = {
-            symbol
-            for symbol, cluster in cluster_membership.items()
-            if cluster == "semiconductor"
-        }
-        exposure_report = build_true_exposure_report(
-            positions=positions,
-            etf_snapshots=etf_snapshots,
-            semiconductor_symbols=semiconductor_symbols,
-            total_account_evaluation=total_account_value,
+    else:
+        print(
+            f"[TRUE_EXPOSURE] total={gate_result.true_exposure_before:,.0f} "
+            f"({gate_result.true_weight_before_pct}% of account)"
         )
-
-        target_row = next(
-            (row for row in exposure_report.rows if row.symbol == args.symbol),
-            None,
+        print(
+            f"[CLUSTER] {gate_result.cluster_value_before:,.0f} "
+            f"({gate_result.cluster_weight_before_pct}% of account)"
         )
-        true_exposure_value = target_row.total_value if target_row else 0.0
-        direct_value = target_row.direct_value if target_row else 0.0
-        indirect_value = target_row.indirect_value if target_row else 0.0
-
-        cluster_name = cluster_membership.get(args.symbol)
-        if total_account_value is None:
-            print("[SKIP] KIS 계좌 총평가금액(tot_evlu_amt)을 받지 못했습니다.")
-        elif cluster_name != "semiconductor":
-            reported_cluster = cluster_name or "(미분류)"
-            print(
-                f"[DATA_GAP] '{reported_cluster}' 클러스터는 portfolio_policy.json에 "
-                "한도(%) 가 정의되어 있지 않습니다. 근거/백테스트 없이 캡을 임의로 "
-                "만들지 않으므로 Cluster/Single-Stock Gate 계산을 생략합니다."
-            )
-        else:
-            time.sleep(0.3)
-            bp = buying_power.inquire(
-                symbol=args.symbol,
-                reference_price=quote.price,
-            )
-            gate_input = GateInput(
-                symbol=args.symbol,
-                name=target_row.name if target_row else args.symbol,
-                current_price=quote.price,
-                direct_value=direct_value,
-                indirect_value=indirect_value,
-                true_exposure_value=true_exposure_value,
-                total_account_value=total_account_value,
-                securities_value=exposure_report.securities_value,
-                cluster_name=cluster_name,
-                cluster_value=exposure_report.semiconductor_value,
-                kis_buyable_qty=int(bp.no_credit_buy_qty or 0),
-                kis_buyable_amount=bp.no_credit_buy_amount or 0.0,
-            )
-            gate_result = evaluate_portfolio_gate(gate_input, policy)
-
-            print(
-                f"[TRUE_EXPOSURE] direct={direct_value:,.0f} "
-                f"indirect={indirect_value:,.0f} total={true_exposure_value:,.0f} "
-                f"({gate_result.true_weight_before_pct}% of account)"
-            )
-            print(
-                f"[CLUSTER] {cluster_name} "
-                f"{exposure_report.semiconductor_value:,.0f} "
-                f"({gate_result.cluster_weight_before_pct}% of account, "
-                f"cap {policy.cluster_max_pct_of_total_account[cluster_name]}%)"
-            )
-            print(
-                f"[FINAL_ALLOWED_QTY] {gate_result.final_allowed_qty}주 "
-                f"({gate_result.buy_amount:,.0f}원) action={gate_result.action}"
-            )
-            if gate_result.blocking_reasons:
-                print(f"[PORTFOLIO_BLOCKS] {', '.join(gate_result.blocking_reasons)}")
+        print(
+            f"[FINAL_ALLOWED_QTY] {gate_result.final_allowed_qty}주 "
+            f"({gate_result.buy_amount:,.0f}원) action={gate_result.action}"
+        )
+        if gate_result.blocking_reasons:
+            print(f"[PORTFOLIO_BLOCKS] {', '.join(gate_result.blocking_reasons)}")
 
     print()
     print("=== 아직 코드로 계산 안 되는 항목 (대화로 채워야 최종 사자/보류/팔자 확정) ===")
