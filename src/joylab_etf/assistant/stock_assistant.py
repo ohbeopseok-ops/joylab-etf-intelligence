@@ -309,6 +309,8 @@ class StockAssistantService:
             return "실계좌 연동이 설정되지 않았습니다."
         try:
             quote = self.quote_client.get_domestic_quote(symbol)
+            if self.request_delay_sec:
+                time.sleep(self.request_delay_sec)
             bp = self.portfolio_provider.get_buying_power(symbol, quote.price)
         except PortfolioDataUnavailable as exc:
             return f"실계좌 연동이 설정되지 않았습니다: {exc}"
@@ -330,6 +332,8 @@ class StockAssistantService:
             quote = self.quote_client.get_domestic_quote(symbol)
         except Exception as exc:
             return f"시세 조회 중 오류가 발생했습니다: {type(exc).__name__}"
+        if self.request_delay_sec:
+            time.sleep(self.request_delay_sec)
         gate_result, fallback_reason = self._portfolio_gate(symbol, symbol, quote.price)
         if gate_result is None:
             return (
@@ -369,6 +373,8 @@ class StockAssistantService:
         """
         if self.index_client is None or quote.change_pct is None:
             return None, None
+        if self.request_delay_sec:
+            time.sleep(self.request_delay_sec)
         try:
             kospi = self.index_client.get_index_price("0001")
         except Exception:
