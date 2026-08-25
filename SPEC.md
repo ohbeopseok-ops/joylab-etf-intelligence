@@ -1,5 +1,10 @@
 # JoyLab ETF Intelligence — SPEC
 
+> Broader engine design (Gates beyond this repo's current implementation, Gold Cases,
+> AI Power Gate, Governance/ESR, Pension Flow Rotation): see
+> `docs/JOYLAB_INVESTMENT_ENGINE.md`. Read it alongside this file before starting new
+> decision-engine work.
+
 ## Mission
 Read-only investment intelligence engine on Korea Investment & Securities Open API. It reads account/market/ETF data, normalizes it, calculates direct + ETF look-through exposure, concentration and portfolio gates, then produces deterministic decision inputs. It is not an automated trading system.
 

@@ -1,5 +1,9 @@
 # TASKS.md
 
+> Full JoyLab Investment Engine design (Gates 1-12, GOLD-001, AI Power Gate formula,
+> Governance/ESR, Pension Flow) lives in `docs/JOYLAB_INVESTMENT_ENGINE.md`. TASK-002+
+> below should be scoped against that document, not re-derived from scratch.
+
 ## Baseline — V0.1.6
 Status: protected baseline.
 
