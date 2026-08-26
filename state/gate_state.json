@@ -56,11 +56,11 @@
     "VALUATION": "UNKNOWN"
   },
   "487240": {
-    "AI_POWER": "FAIL",
+    "AI_POWER": "UNKNOWN",
     "DATA_CONFIDENCE": "PASS",
     "FLOW": "UNKNOWN",
     "PRICE": "UNKNOWN",
-    "RELATIVE_STRENGTH": "FAIL",
+    "RELATIVE_STRENGTH": "PASS",
     "VALUATION": "UNKNOWN"
   }
 }
