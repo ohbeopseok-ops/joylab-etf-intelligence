@@ -2,7 +2,7 @@
   "000660": {
     "DATA_CONFIDENCE": "PASS",
     "FLOW": "UNKNOWN",
-    "PRICE": "FAIL",
+    "PRICE": "UNKNOWN",
     "RELATIVE_STRENGTH": "PASS",
     "VALUATION": "UNKNOWN"
   },
@@ -23,7 +23,7 @@
   "005930": {
     "DATA_CONFIDENCE": "PASS",
     "FLOW": "UNKNOWN",
-    "PRICE": "FAIL",
+    "PRICE": "UNKNOWN",
     "RELATIVE_STRENGTH": "PASS",
     "VALUATION": "UNKNOWN"
   },
@@ -44,7 +44,7 @@
   "066570": {
     "DATA_CONFIDENCE": "PASS",
     "FLOW": "UNKNOWN",
-    "PRICE": "FAIL",
+    "PRICE": "UNKNOWN",
     "RELATIVE_STRENGTH": "FAIL",
     "VALUATION": "UNKNOWN"
   },
