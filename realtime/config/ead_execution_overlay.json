@@ -1,0 +1,13 @@
+{
+  "version": "V0.1-execution-overlay",
+  "as_of": "2026-08-28",
+  "research_scores": {
+    "064400": {"name":"LG씨엔에스","research_score":74,"confidence":"MEDIUM","certified":false},
+    "018260": {"name":"삼성SDS","research_score":70,"confidence":"MEDIUM","certified":false},
+    "263860": {"name":"지니언스","research_score":63,"confidence":"MEDIUM","certified":false},
+    "053800": {"name":"안랩","research_score":60,"confidence":"MEDIUM","certified":false},
+    "307950": {"name":"현대오토에버","research_score":57,"confidence":"LOW-MEDIUM","certified":false}
+  },
+  "execution_weights": {"research":80,"flow":10,"relative_strength":5,"price_quality":5},
+  "rules": {"flow_pass_required":true,"rs_pass_min_pctp":1.0,"high_drawdown_limit_pct":-2.5,"chase_block_pct":6.0,"certification_required_for_buy":true}
+}
