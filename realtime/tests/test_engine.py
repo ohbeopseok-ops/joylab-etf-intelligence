@@ -8,6 +8,7 @@ def snap(kbf=100,kbi=100,skpct=-.8,sspct=-1.1,kpct=-.7,skf=-100,ski=-100,seflow=
       StockSnapshot(ticker="005930",name="삼성전자",price=263000,change_pct=sspct,relative_to_kospi=sspct-kpct),
       StockSnapshot(ticker="000660",name="SK하이닉스",price=1716000,change_pct=skpct,relative_to_kospi=skpct-kpct,relative_to_peer=skpct-sspct,flow=FlowSnapshot(foreign_net_qty=skf,institution_net_qty=ski)),
       StockSnapshot(ticker="009150",name="삼성전기",price=1385000,change_pct=sepct,high_price=1400000,drawdown_from_high_pct=sedraw,relative_to_kospi=sepct-kpct,flow=FlowSnapshot(foreign_net_qty=seflow[0],institution_net_qty=seflow[1])),
+      StockSnapshot(ticker="064400",name="LG씨엔에스",price=74100,change_pct=1.5,high_price=74800,drawdown_from_high_pct=-.94,relative_to_kospi=2.2,flow=FlowSnapshot(foreign_net_qty=120,institution_net_qty=80)),
       StockSnapshot(ticker="010120",name="LS ELECTRIC",price=216500,change_pct=-1,relative_to_kospi=-.3,flow=FlowSnapshot(foreign_net_qty=100,institution_net_qty=100))])
 
 def dec(m,t): return next(x for x in evaluate(m).decisions if x.ticker==t)
@@ -19,3 +20,7 @@ def test_samsung_electro_buy_when_all_gates_pass(): assert dec(snap(),"009150").
 def test_samsung_electro_unknown_flow_blocks(): assert dec(snap(seflow=(None,None)),"009150").action=="HOLD"
 def test_samsung_electro_chase_block(): assert dec(snap(sepct=6.1),"009150").action=="HOLD"
 def test_samsung_electro_high_drawdown_blocks(): assert dec(snap(sedraw=-4.2,seflow=(-10,-20)),"009150").action=="HOLD"
+def test_lgcns_critical_unknown_blocks_buy():
+    d=dec(snap(),"064400")
+    assert d.action=="HOLD"
+    assert any("UNKNOWN" in r for r in d.reasons)
