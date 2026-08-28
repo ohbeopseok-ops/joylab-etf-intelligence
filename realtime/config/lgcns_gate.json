@@ -1,0 +1,28 @@
+{
+  "ticker": "064400",
+  "name": "LG씨엔에스",
+  "version": "V0.1",
+  "weights": {
+    "growth": 15,
+    "ai_exposure": 15,
+    "orders_backlog": 15,
+    "margin": 15,
+    "flow": 15,
+    "rs": 10,
+    "valuation": 15
+  },
+  "fundamentals": {
+    "growth": {"score": 0, "status": "UNKNOWN"},
+    "ai_exposure": {"score": 0, "status": "UNKNOWN"},
+    "orders_backlog": {"score": 0, "status": "UNKNOWN"},
+    "margin": {"score": 0, "status": "UNKNOWN"},
+    "valuation": {"score": 0, "status": "UNKNOWN"}
+  },
+  "rules": {
+    "buy_score_min": 80,
+    "rs_pass_min_pctp": 2.0,
+    "high_drawdown_limit_pct": -2.5,
+    "chase_block_pct": 6.0,
+    "critical_unknown_blocks_buy": true
+  }
+}
