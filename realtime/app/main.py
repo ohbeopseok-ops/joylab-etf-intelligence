@@ -5,10 +5,10 @@ from fastapi.staticfiles import StaticFiles
 import uvicorn
 from .config import settings
 from .provider import MarketProvider
-from .engine import evaluate
+from .engine import evaluate,evaluate_ead
 
 settings.validate_safety()
-app=FastAPI(title="JoyLab KIS Realtime",version="0.2.0")
+app=FastAPI(title="JoyLab KIS Realtime",version="0.2.1")
 provider=MarketProvider()
 STATIC=Path(__file__).parent/"static"
 app.mount("/static",StaticFiles(directory=STATIC),name="static")
@@ -24,6 +24,10 @@ def snapshot():
 @app.get("/api/decision")
 def decision():
     try:return evaluate(provider.snapshot())
+    except Exception as e:raise HTTPException(502,str(e))
+@app.get("/api/ead-ranking")
+def ead_ranking():
+    try:return evaluate_ead(provider.snapshot())
     except Exception as e:raise HTTPException(502,str(e))
 @app.get("/api/raw/flow/{ticker}")
 def raw_flow(ticker:str):
