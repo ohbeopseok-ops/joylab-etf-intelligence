@@ -1,0 +1,21 @@
+name: ci-standard-v1
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  joylab-python-quality-gate:
+    uses: ./.github/workflows/reusable-python-quality-gate.yml
+    with:
+      python-version: '3.12'
+      pythonpath: 'src'
+      install-command: 'python -m pip install -r requirements.txt'
+      import-command: 'python -c "import joylab_etf"'
+      collection-command: 'pytest --collect-only -q'
+      unit-command: 'pytest -q tests --ignore=tests/gold_cases'
+      schema-command: 'python -c "print(\"NOT_APPLICABLE: no frozen schema/contract suite in V1.0 adoption baseline\")"'
+      gold-command: 'pytest -q tests/gold_cases'
+      e2e-command: 'python -c "print(\"NOT_APPLICABLE: no repository-native E2E suite in V1.0 adoption baseline\")"'
