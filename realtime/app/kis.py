@@ -1,6 +1,5 @@
 from __future__ import annotations
 import threading,time
-from typing import Any
 import requests
 from .config import settings
 from .models import FlowSnapshot
@@ -9,17 +8,12 @@ _LOCK=threading.Lock()
 
 class KISClient:
     def __init__(self):
-        self.base=settings.base_url
-        self.s=requests.Session()
-        self.token=None
-        self.exp=0.0
+        self.base=settings.base_url; self.s=requests.Session(); self.token=None; self.exp=0.0
     def auth(self,force=False):
         with _LOCK:
             if not force and self.token and self.exp>time.time()+60:return self.token
             r=self.s.post(self.base+"/oauth2/tokenP",json={"grant_type":"client_credentials","appkey":settings.app_key,"appsecret":settings.app_secret},timeout=10)
-            r.raise_for_status(); d=r.json()
-            self.token=d["access_token"]; self.exp=time.time()+int(d.get("expires_in",82800))
-            return self.token
+            r.raise_for_status(); d=r.json(); self.token=d["access_token"]; self.exp=time.time()+int(d.get("expires_in",82800)); return self.token
     def _get(self,path,tr_id,params):
         h={"authorization":f"Bearer {self.auth()}","appkey":settings.app_key,"appsecret":settings.app_secret,"tr_id":tr_id}
         r=self.s.get(self.base+path,headers=h,params=params,timeout=10); r.raise_for_status(); d=r.json()
@@ -34,7 +28,10 @@ class KISClient:
     @staticmethod
     def parse_price(o):
         n=lambda k: float(str(o.get(k,0)).replace(",","") or 0)
-        return int(n("stck_prpr")),n("prdy_ctrt"),int(n("acml_vol")) if o.get("acml_vol") else None
+        price=int(n("stck_prpr")); pct=n("prdy_ctrt"); vol=int(n("acml_vol")) if o.get("acml_vol") else None
+        high=int(n("stck_hgpr")) if o.get("stck_hgpr") else None
+        draw=round((price/high-1)*100,2) if high and high>0 else None
+        return price,pct,vol,high,draw
     @staticmethod
     def parse_index(o):
         def f(keys):
