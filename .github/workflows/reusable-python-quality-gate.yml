@@ -1,0 +1,153 @@
+name: reusable-python-quality-gate
+
+on:
+  workflow_call:
+    inputs:
+      python-version:
+        description: Python version used by the runner
+        required: false
+        type: string
+        default: '3.12'
+      install-command:
+        description: Project installation command
+        required: false
+        type: string
+        default: 'python -m pip install -e .[dev]'
+      pythonpath:
+        description: Optional PYTHONPATH value relative to github.workspace
+        required: false
+        type: string
+        default: 'src'
+      import-command:
+        description: C0 import validation command
+        required: true
+        type: string
+      collection-command:
+        description: C1 pytest collection command
+        required: false
+        type: string
+        default: 'pytest --collect-only -q'
+      unit-command:
+        description: C2 unit command
+        required: true
+        type: string
+      schema-command:
+        description: C3 schema or contract command
+        required: true
+        type: string
+      gold-command:
+        description: C4 Gold Case command
+        required: true
+        type: string
+      e2e-command:
+        description: C5 end-to-end command
+        required: true
+        type: string
+
+jobs:
+  c0-import:
+    name: C0 Import
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: ${{ github.workspace }}/${{ inputs.pythonpath }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
+      - name: Install
+        shell: bash
+        run: ${{ inputs.install-command }}
+      - name: Import gate
+        shell: bash
+        run: ${{ inputs.import-command }}
+
+  c1-collection:
+    name: C1 Collection
+    needs: c0-import
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: ${{ github.workspace }}/${{ inputs.pythonpath }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
+      - name: Install
+        shell: bash
+        run: ${{ inputs.install-command }}
+      - name: Collection gate
+        shell: bash
+        run: ${{ inputs.collection-command }}
+
+  c2-unit:
+    name: C2 Unit
+    needs: c1-collection
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: ${{ github.workspace }}/${{ inputs.pythonpath }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
+      - name: Install
+        shell: bash
+        run: ${{ inputs.install-command }}
+      - name: Unit gate
+        shell: bash
+        run: ${{ inputs.unit-command }}
+
+  c3-schema-contract:
+    name: C3 Schema Contract
+    needs: c2-unit
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: ${{ github.workspace }}/${{ inputs.pythonpath }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
+      - name: Install
+        shell: bash
+        run: ${{ inputs.install-command }}
+      - name: Schema contract gate
+        shell: bash
+        run: ${{ inputs.schema-command }}
+
+  c4-gold-case:
+    name: C4 Gold Case
+    needs: c3-schema-contract
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: ${{ github.workspace }}/${{ inputs.pythonpath }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
+      - name: Install
+        shell: bash
+        run: ${{ inputs.install-command }}
+      - name: Gold Case gate
+        shell: bash
+        run: ${{ inputs.gold-command }}
+
+  c5-e2e:
+    name: C5 E2E
+    needs: c4-gold-case
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: ${{ github.workspace }}/${{ inputs.pythonpath }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
+      - name: Install
+        shell: bash
+        run: ${{ inputs.install-command }}
+      - name: E2E gate
+        shell: bash
+        run: ${{ inputs.e2e-command }}
