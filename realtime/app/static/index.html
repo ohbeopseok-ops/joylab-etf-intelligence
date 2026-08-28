@@ -1,0 +1,6 @@
+<!doctype html><meta charset="utf-8"><title>JoyLab KIS Realtime</title>
+<style>body{font-family:system-ui;margin:24px;background:#111;color:#eee}table{border-collapse:collapse;width:100%}td,th{padding:10px;border-bottom:1px solid #333;text-align:left}.muted{color:#999}</style>
+<h1>JoyLab KIS Realtime V0.2</h1><div id="meta" class="muted"></div><table><thead><tr><th>종목</th><th>행동</th><th>점수</th><th>근거</th></tr></thead><tbody id="rows"></tbody></table>
+<script>
+async function load(){const d=await fetch('/api/decision').then(r=>r.json());document.getElementById('meta').textContent=d.timestamp+' · '+d.market_action;document.getElementById('rows').innerHTML=d.decisions.map(x=>'<tr><td>'+x.name+'</td><td>'+x.label+'</td><td>'+x.score+'</td><td>'+x.reasons.join(' / ')+'</td></tr>').join('')}load();setInterval(load,3000);
+</script>
