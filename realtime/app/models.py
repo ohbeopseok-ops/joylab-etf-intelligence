@@ -13,6 +13,8 @@ class StockSnapshot(BaseModel):
     name:str
     price:int
     change_pct:float
+    high_price:int|None=None
+    drawdown_from_high_pct:float|None=None
     volume:int|None=None
     relative_to_kospi:float|None=None
     relative_to_peer:float|None=None
