@@ -1,0 +1,17 @@
+name: JoyLab Release Gate
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  release-gate:
+    uses: ohbeopseok-ops/ohbeopseok-ops/.github/workflows/joylab-release-gate-v1.yml@main
+    with:
+      working-directory: "."
