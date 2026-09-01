@@ -23,7 +23,7 @@
   "005930": {
     "DATA_CONFIDENCE": "FAIL",
     "FLOW": "UNKNOWN",
-    "PRICE": "FAIL",
+    "PRICE": "UNKNOWN",
     "RELATIVE_STRENGTH": "PASS",
     "VALUATION": "UNKNOWN"
   },
