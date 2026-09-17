@@ -3,14 +3,14 @@
     "DATA_CONFIDENCE": "FAIL",
     "FLOW": "UNKNOWN",
     "PRICE": "UNKNOWN",
-    "RELATIVE_STRENGTH": "PASS",
+    "RELATIVE_STRENGTH": "FAIL",
     "VALUATION": "UNKNOWN"
   },
   "000810": {
     "DATA_CONFIDENCE": "FAIL",
     "FLOW": "UNKNOWN",
     "PRICE": "UNKNOWN",
-    "RELATIVE_STRENGTH": "FAIL",
+    "RELATIVE_STRENGTH": "PASS",
     "VALUATION": "FAIL"
   },
   "005380": {
@@ -24,7 +24,7 @@
     "DATA_CONFIDENCE": "FAIL",
     "FLOW": "UNKNOWN",
     "PRICE": "FAIL",
-    "RELATIVE_STRENGTH": "PASS",
+    "RELATIVE_STRENGTH": "FAIL",
     "VALUATION": "UNKNOWN"
   },
   "010120": {
@@ -44,7 +44,7 @@
   "066570": {
     "DATA_CONFIDENCE": "FAIL",
     "FLOW": "UNKNOWN",
-    "PRICE": "UNKNOWN",
+    "PRICE": "FAIL",
     "RELATIVE_STRENGTH": "FAIL",
     "VALUATION": "UNKNOWN"
   },
@@ -52,7 +52,7 @@
     "DATA_CONFIDENCE": "FAIL",
     "FLOW": "UNKNOWN",
     "PRICE": "UNKNOWN",
-    "RELATIVE_STRENGTH": "PASS",
+    "RELATIVE_STRENGTH": "FAIL",
     "VALUATION": "UNKNOWN"
   },
   "487240": {
