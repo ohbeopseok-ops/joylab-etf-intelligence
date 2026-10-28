@@ -9,8 +9,8 @@
   "000810": {
     "DATA_CONFIDENCE": "FAIL",
     "FLOW": "UNKNOWN",
-    "PRICE": "UNKNOWN",
-    "RELATIVE_STRENGTH": "PASS",
+    "PRICE": "FAIL",
+    "RELATIVE_STRENGTH": "FAIL",
     "VALUATION": "UNKNOWN"
   },
   "005380": {
