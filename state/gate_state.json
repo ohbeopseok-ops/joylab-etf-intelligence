@@ -24,7 +24,7 @@
     "DATA_CONFIDENCE": "FAIL",
     "FLOW": "UNKNOWN",
     "PRICE": "FAIL",
-    "RELATIVE_STRENGTH": "FAIL",
+    "RELATIVE_STRENGTH": "PASS",
     "VALUATION": "UNKNOWN"
   },
   "010120": {
