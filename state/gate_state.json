@@ -11,7 +11,7 @@
     "FLOW": "UNKNOWN",
     "PRICE": "UNKNOWN",
     "RELATIVE_STRENGTH": "PASS",
-    "VALUATION": "UNKNOWN"
+    "VALUATION": "FAIL"
   },
   "005380": {
     "DATA_CONFIDENCE": "FAIL",
