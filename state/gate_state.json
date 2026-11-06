@@ -4,14 +4,14 @@
     "FLOW": "UNKNOWN",
     "PRICE": "FAIL",
     "RELATIVE_STRENGTH": "FAIL",
-    "VALUATION": "UNKNOWN"
+    "VALUATION": "PASS"
   },
   "000810": {
     "DATA_CONFIDENCE": "FAIL",
     "FLOW": "UNKNOWN",
-    "PRICE": "UNKNOWN",
-    "RELATIVE_STRENGTH": "PASS",
-    "VALUATION": "FAIL"
+    "PRICE": "FAIL",
+    "RELATIVE_STRENGTH": "FAIL",
+    "VALUATION": "UNKNOWN"
   },
   "005380": {
     "DATA_CONFIDENCE": "FAIL",
